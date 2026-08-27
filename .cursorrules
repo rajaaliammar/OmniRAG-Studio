@@ -1,0 +1,25 @@
+# OmniRAG Studio — Cursor Rules
+# Enforce PEP-8, modular architecture, and production-ready Python.
+
+## Language & Style
+- Follow PEP-8 (79–99 char lines, 4-space indent, snake_case functions/vars, PascalCase classes).
+- Use type hints on all public functions, methods, and class attributes.
+- Write Google-style docstrings on modules, classes, and public functions.
+- Prefer explicit over implicit; no wildcard imports (`from x import *`).
+- Keep functions small and single-purpose; extract helpers rather than nesting logic.
+
+## Architecture
+- Keep layers isolated: `api` (HTTP) → `ingestion` / `rag` / `vectorstore` / `analytics` (domain).
+- Do not import FastAPI or Streamlit inside domain modules (`ingestion`, `rag`, `vectorstore`, `analytics`).
+- Configuration lives only in `backend/config.py` (Pydantic Settings). Never hardcode secrets.
+- New HTTP endpoints belong under `backend/api/v1/` and must be registered in `backend/api/router.py`.
+- Frontend talks to the backend only through `frontend/utils/api_client.py`.
+
+## Dependencies & Data
+- Read secrets from environment variables via `.env` (never commit `.env`).
+- Vector data belongs in ChromaDB (`CHROMA_DB_PATH`); analytics logs belong in SQLite (`DATABASE_URL`).
+- RAG answers must carry source citations; do not return uncited generations.
+
+## Testing
+- Place tests in `tests/` mirroring the backend package they cover.
+- Prefer pytest; mock external APIs and vector stores; do not hit live OpenAI in unit tests.
