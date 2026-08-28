@@ -15,6 +15,15 @@ from backend.ingestion.text_splitter import split_documents, split_text
 from backend.ingestion.web_loader import load_url, load_web
 
 
+@pytest.fixture
+def mock_vectorstore(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Skip OpenAI/Chroma writes in HTTP ingest tests."""
+    monkeypatch.setattr(
+        "backend.api.v1.ingestion.add_documents_to_vectorstore",
+        lambda collection_name, documents: len(documents),
+    )
+
+
 def _build_pdf(text: str) -> bytes:
     """Construct a minimal single-page PDF containing ``text``."""
     escaped = (
@@ -203,7 +212,9 @@ def test_split_text_returns_strings() -> None:
     assert all(isinstance(chunk, str) for chunk in chunks)
 
 
-def test_ingest_pdf_endpoint_returns_counts_and_snippets() -> None:
+def test_ingest_pdf_endpoint_returns_counts_and_snippets(
+    mock_vectorstore: None,
+) -> None:
     """POST /api/v1/ingest/pdf should parse a PDF and return snippets."""
     from fastapi.testclient import TestClient
 
@@ -221,9 +232,13 @@ def test_ingest_pdf_endpoint_returns_counts_and_snippets() -> None:
     assert body["chunk_count"] >= 1
     assert body["snippets"]
     assert "Hello OmniRAG" in body["snippets"][0]
+    assert body["collection_name"] == "default_collection"
+    assert body["stored_count"] == body["chunk_count"]
 
 
-def test_ingest_csv_endpoint_returns_row_snippets() -> None:
+def test_ingest_csv_endpoint_returns_row_snippets(
+    mock_vectorstore: None,
+) -> None:
     """POST /api/v1/ingest/csv should parse rows into snippets."""
     from fastapi.testclient import TestClient
 
@@ -247,7 +262,10 @@ def test_ingest_csv_endpoint_returns_row_snippets() -> None:
     assert "Widget" in body["snippets"][0]
 
 
-def test_ingest_url_endpoint(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_ingest_url_endpoint(
+    monkeypatch: pytest.MonkeyPatch,
+    mock_vectorstore: None,
+) -> None:
     """POST /api/v1/ingest/url should return chunk counts for a fetched page."""
     from fastapi.testclient import TestClient
 
@@ -272,6 +290,7 @@ def test_ingest_url_endpoint(monkeypatch: pytest.MonkeyPatch) -> None:
     assert body["document_count"] == 1
     assert body["chunk_count"] >= 1
     assert "OmniRAG" in body["snippets"][0]
+    assert body["collection_name"] == "default_collection"
 
 
 def test_ingest_pdf_rejects_wrong_extension() -> None:
@@ -286,3 +305,86 @@ def test_ingest_pdf_rejects_wrong_extension() -> None:
         files={"file": ("notes.txt", b"not a pdf", "text/plain")},
     )
     assert response.status_code == 400
+
+
+def test_ingest_pdf_accepts_collection_name(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """PDF ingest should persist chunks into the requested collection."""
+    from fastapi.testclient import TestClient
+
+    from backend.main import app
+
+    captured: dict[str, object] = {}
+
+    def _fake_add(collection_name: str, documents: list) -> int:
+        captured["name"] = collection_name
+        captured["count"] = len(documents)
+        return len(documents)
+
+    monkeypatch.setattr(
+        "backend.api.v1.ingestion.add_documents_to_vectorstore",
+        _fake_add,
+    )
+    client = TestClient(app)
+    response = client.post(
+        "/api/v1/ingest/pdf",
+        data={"collection_name": "pdf_handbook"},
+        files={
+            "file": ("handbook.pdf", _build_pdf("Hello OmniRAG"), "application/pdf")
+        },
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["collection_name"] == "pdf_handbook"
+    assert captured["name"] == "pdf_handbook"
+    assert captured["count"] == body["chunk_count"]
+
+
+def test_ingest_store_endpoint(monkeypatch: pytest.MonkeyPatch) -> None:
+    """POST /api/v1/ingest/store should embed and save prepared documents."""
+    from fastapi.testclient import TestClient
+
+    from backend.main import app
+
+    monkeypatch.setattr(
+        "backend.api.v1.ingestion.add_documents_to_vectorstore",
+        lambda collection_name, documents: len(documents),
+    )
+    client = TestClient(app)
+    response = client.post(
+        "/api/v1/ingest/store",
+        json={
+            "collection_name": "manual_chunks",
+            "documents": [
+                {
+                    "page_content": "OmniRAG Studio indexes PDF, CSV, and web sources.",
+                    "metadata": {"source": "notes.md"},
+                }
+            ],
+        },
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["source"] == "store"
+    assert body["collection_name"] == "manual_chunks"
+    assert body["document_count"] == 1
+    assert body["stored_count"] >= 1
+    assert "OmniRAG Studio" in body["snippets"][0]
+
+
+def test_docs_endpoint_does_not_load_huggingface() -> None:
+    """GET /docs must work without initializing HuggingFaceEmbeddings."""
+    from fastapi.testclient import TestClient
+
+    from backend.main import app
+    from backend.vectorstore import embeddings as embeddings_mod
+
+    embeddings_mod.reset_embedding_clients()
+    embeddings_mod.HuggingFaceEmbeddings = None
+    client = TestClient(app)
+    response = client.get("/docs")
+    assert response.status_code == 200
+    assert embeddings_mod.HuggingFaceEmbeddings is None
+    assert embeddings_mod.HuggingFaceEmbeddingsHolder._clients == {}
+

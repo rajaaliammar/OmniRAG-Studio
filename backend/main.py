@@ -4,9 +4,28 @@ import uvicorn
 from fastapi import FastAPI
 
 from backend.api.router import api_router
-from backend.config import get_settings
+from backend.config import ENV_FILE, get_openai_api_key, get_settings, mask_secret
 
 settings = get_settings()
+_provider = (settings.embedding_provider or "huggingface").strip().lower()
+print(f"[OmniRAG Studio] Embedding provider: {_provider or 'huggingface'}")
+if _provider == "openai":
+    _openai_key = get_openai_api_key()
+    if _openai_key:
+        print(
+            f"[OmniRAG Studio] OPENAI_API_KEY detected: {mask_secret(_openai_key)} "
+            f"(source file: {ENV_FILE})"
+        )
+    else:
+        print(
+            "[OmniRAG Studio] OPENAI_API_KEY was NOT detected. "
+            f"Set it in {ENV_FILE} when EMBEDDING_PROVIDER=openai."
+        )
+else:
+    print(
+        "[OmniRAG Studio] Using local HuggingFace embeddings "
+        f"({settings.embedding_model}). OPENAI_API_KEY is not required."
+    )
 
 app = FastAPI(
     title=settings.app_name,
