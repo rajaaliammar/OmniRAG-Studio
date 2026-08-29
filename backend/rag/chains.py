@@ -1,15 +1,5 @@
-"""LangChain / LlamaIndex RAG chain assembly."""
+"""LangChain RAG chain assembly (compatibility wrapper)."""
 
-from typing import Any
+from backend.rag.chain import RagResult, answer_query, build_rag_chain
 
-
-def build_rag_chain() -> Any:
-    """Construct the retrieval-augmented generation chain.
-
-    Returns:
-        A runnable chain that accepts a question and returns an answer.
-
-    Raises:
-        NotImplementedError: Until the RAG chain is implemented.
-    """
-    raise NotImplementedError("RAG chain is not implemented yet.")
+__all__ = ["RagResult", "answer_query", "build_rag_chain"]

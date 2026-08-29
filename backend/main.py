@@ -29,10 +29,14 @@ else:
 
 app = FastAPI(
     title=settings.app_name,
-    description="Multi-source RAG chatbot with real-time analytics.",
+    description=(
+        "Multi-source RAG chatbot with real-time analytics. "
+        "Chat lives at /api/v1/chat/query."
+    ),
     version="0.1.0",
 )
 
+# /api/v1/ingest, /api/v1/chat, /api/v1/analytics
 app.include_router(api_router)
 
 

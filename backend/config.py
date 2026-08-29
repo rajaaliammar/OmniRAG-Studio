@@ -56,6 +56,11 @@ class Settings(BaseSettings):
     embedding_fallback_model: str = "text-embedding-3-small"
     embedding_batch_size: int = 64
     default_collection_name: str = "default_collection"
+    llm_provider: str = "openai"
+    llm_model: str = "gpt-4o-mini"
+    rag_top_k: int = 4
+    rag_score_threshold: float = 0.0
+    chat_memory_max_turns: int = 12
 
     @field_validator("openai_api_key", mode="before")
     @classmethod
