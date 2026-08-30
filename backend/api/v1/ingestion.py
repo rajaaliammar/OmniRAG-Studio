@@ -5,11 +5,11 @@ from __future__ import annotations
 import asyncio
 import logging
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile, status
 from langchain_core.documents import Document
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field, HttpUrl, field_validator
 
 from backend.config import get_settings
 from backend.ingestion.csv_loader import load_csv
@@ -27,6 +27,7 @@ router = APIRouter(prefix="/ingest", tags=["ingestion"])
 _MAX_UPLOAD_BYTES = 25 * 1024 * 1024
 _SNIPPET_LIMIT = 3
 _SNIPPET_CHARS = 300
+Loader = Callable[..., list[Document]]
 
 
 class UrlIngestRequest(BaseModel):
@@ -37,7 +38,17 @@ class UrlIngestRequest(BaseModel):
         default="default_collection",
         description="ChromaDB collection to store chunks in.",
         min_length=1,
+        max_length=63,
     )
+
+    @field_validator("collection_name")
+    @classmethod
+    def _strip_collection_name(cls, value: str) -> str:
+        """Reject blank collection names after trimming."""
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("collection_name must not be empty.")
+        return cleaned
 
 
 class DocumentPayload(BaseModel):
@@ -55,7 +66,17 @@ class StoreRequest(BaseModel):
         default="default_collection",
         description="ChromaDB collection to store chunks in.",
         min_length=1,
+        max_length=63,
     )
+
+    @field_validator("collection_name")
+    @classmethod
+    def _strip_collection_name(cls, value: str) -> str:
+        """Reject blank collection names after trimming."""
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("collection_name must not be empty.")
+        return cleaned
 
 
 class IngestResponse(BaseModel):
@@ -90,6 +111,8 @@ def _to_response(
     collection_name: str,
 ) -> IngestResponse:
     """Split loaded documents, persist embeddings, and build the API payload."""
+    if not documents:
+        raise IngestionError("No extractable text was found in the source.")
     chunks = split_documents(documents)
     name = _collection_name(collection_name)
     stored_count = add_documents_to_vectorstore(name, chunks)
@@ -106,6 +129,8 @@ def _to_response(
 
 def _http_error(exc: Exception) -> HTTPException:
     """Map domain ingestion errors onto HTTP status codes."""
+    if isinstance(exc, HTTPException):
+        return exc
     if isinstance(exc, FileNotFoundError):
         return HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -118,14 +143,14 @@ def _http_error(exc: Exception) -> HTTPException:
         )
     if isinstance(exc, VectorStoreError):
         message = str(exc).lower()
+        if "not found" in message:
+            return HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=str(exc),
+            )
         if "rate-limited" in message or "rate limit" in message:
             return HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail=str(exc),
-            )
-        if "authentication" in message or "openai_api_key" in message:
-            return HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail=str(exc),
             )
         return HTTPException(
@@ -168,6 +193,49 @@ async def _read_upload(
     return payload, filename
 
 
+async def _ingest_upload(
+    file: UploadFile,
+    collection_name: str,
+    allowed_suffixes: tuple[str, ...],
+    loader: Loader,
+) -> IngestResponse:
+    """Shared upload path: validate, load, chunk, and persist."""
+    payload, filename = await _read_upload(file, allowed_suffixes)
+    try:
+        documents = await asyncio.to_thread(
+            loader, payload, source_name=filename
+        )
+        return await asyncio.to_thread(
+            _to_response, filename, documents, collection_name
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise _http_error(exc) from exc
+
+
+@router.post("/file", response_model=IngestResponse)
+async def ingest_file(
+    file: UploadFile = File(..., description="PDF or CSV file to ingest"),
+    collection_name: str = Form(
+        "default_collection",
+        description="ChromaDB collection to store chunks in.",
+    ),
+) -> IngestResponse:
+    """Ingest a PDF or CSV, dispatching by file extension."""
+    suffix = Path(file.filename or "upload").suffix.lower()
+    if suffix == ".pdf":
+        return await _ingest_upload(file, collection_name, (".pdf",), load_pdf)
+    if suffix == ".csv":
+        return await _ingest_upload(file, collection_name, (".csv",), load_csv)
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail=(
+            f"Expected a .pdf or .csv file; got '{file.filename or 'upload'}'."
+        ),
+    )
+
+
 @router.post("/pdf", response_model=IngestResponse)
 async def ingest_pdf(
     file: UploadFile = File(..., description="PDF document to ingest"),
@@ -177,16 +245,7 @@ async def ingest_pdf(
     ),
 ) -> IngestResponse:
     """Load a PDF, chunk it, embed it, and persist it to ChromaDB."""
-    payload, filename = await _read_upload(file, (".pdf",))
-    try:
-        documents = await asyncio.to_thread(
-            load_pdf, payload, source_name=filename
-        )
-        return await asyncio.to_thread(
-            _to_response, filename, documents, collection_name
-        )
-    except Exception as exc:
-        raise _http_error(exc) from exc
+    return await _ingest_upload(file, collection_name, (".pdf",), load_pdf)
 
 
 @router.post("/csv", response_model=IngestResponse)
@@ -198,16 +257,7 @@ async def ingest_csv(
     ),
 ) -> IngestResponse:
     """Load a CSV, chunk it, embed it, and persist it to ChromaDB."""
-    payload, filename = await _read_upload(file, (".csv",))
-    try:
-        documents = await asyncio.to_thread(
-            load_csv, payload, source_name=filename
-        )
-        return await asyncio.to_thread(
-            _to_response, filename, documents, collection_name
-        )
-    except Exception as exc:
-        raise _http_error(exc) from exc
+    return await _ingest_upload(file, collection_name, (".csv",), load_csv)
 
 
 @router.post("/url", response_model=IngestResponse)
@@ -216,8 +266,12 @@ def ingest_url(body: UrlIngestRequest) -> IngestResponse:
     url = str(body.url)
     try:
         documents = load_url(url)
+        if not documents:
+            raise IngestionError(f"No extractable text found at '{url}'.")
         source = str(documents[0].metadata.get("source") or url)
         return _to_response(source, documents, body.collection_name)
+    except HTTPException:
+        raise
     except Exception as exc:
         raise _http_error(exc) from exc
 
@@ -231,5 +285,7 @@ def ingest_store(body: StoreRequest) -> IngestResponse:
             for item in body.documents
         ]
         return _to_response("store", documents, body.collection_name)
+    except HTTPException:
+        raise
     except Exception as exc:
         raise _http_error(exc) from exc

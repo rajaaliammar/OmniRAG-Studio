@@ -27,6 +27,15 @@ def _clean_memory() -> None:
     reset_llm_client()
 
 
+@pytest.fixture
+def existing_collection(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Skip Chroma lookups in HTTP chat tests that assume a populated store."""
+    monkeypatch.setattr(
+        "backend.api.v1.chat.collection_exists",
+        lambda name: True,
+    )
+
+
 def test_qa_prompt_contains_context_placeholder() -> None:
     """Default QA prompt must include a context slot."""
     prompt = get_qa_prompt()
@@ -147,6 +156,7 @@ def test_answer_query_falls_back_on_openai_quota(
 
 def test_chat_query_returns_200_when_llm_quota_exceeded(
     monkeypatch: pytest.MonkeyPatch,
+    existing_collection: None,
 ) -> None:
     """POST /api/v1/chat/query stays 200 when the chain uses extractive fallback."""
     from fastapi.testclient import TestClient
@@ -214,7 +224,10 @@ def test_memory_append_and_clear() -> None:
     assert memory.clear("abc") is False
 
 
-def test_chat_query_endpoint(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_chat_query_endpoint(
+    monkeypatch: pytest.MonkeyPatch,
+    existing_collection: None,
+) -> None:
     """POST /api/v1/chat/query should return answer, citations, session_id."""
     from fastapi.testclient import TestClient
 
@@ -272,4 +285,56 @@ def test_chat_query_rejects_empty_query() -> None:
         "/api/v1/chat/query",
         json={"query": "", "collection_name": "local_test"},
     )
+    assert response.status_code == 422
+    assert response.json()["detail"]
+
+
+def test_chat_query_rejects_whitespace_query() -> None:
+    """Whitespace-only queries should be rejected with 422."""
+    from fastapi.testclient import TestClient
+
+    from backend.main import app
+
+    client = TestClient(app)
+    response = client.post(
+        "/api/v1/chat/query",
+        json={"query": "   ", "collection_name": "local_test"},
+    )
+    assert response.status_code == 422
+
+
+def test_chat_query_missing_collection_returns_404(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Unknown collections should return HTTP 404 instead of empty answers."""
+    from fastapi.testclient import TestClient
+
+    from backend.main import app
+
+    monkeypatch.setattr(
+        "backend.api.v1.chat.collection_exists",
+        lambda name: False,
+    )
+    client = TestClient(app)
+    response = client.post(
+        "/api/v1/chat/query",
+        json={
+            "query": "What is in the notes?",
+            "collection_name": "does_not_exist",
+        },
+    )
+    assert response.status_code == 404
+    detail = str(response.json()["detail"]).lower()
+    assert "not found" in detail
+    assert "ingest" in detail
+
+
+def test_chat_clear_rejects_blank_session() -> None:
+    """Clearing memory requires a non-empty session_id."""
+    from fastapi.testclient import TestClient
+
+    from backend.main import app
+
+    client = TestClient(app)
+    response = client.post("/api/v1/chat/clear", json={"session_id": "   "})
     assert response.status_code == 422

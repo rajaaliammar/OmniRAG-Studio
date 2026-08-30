@@ -388,3 +388,145 @@ def test_docs_endpoint_does_not_load_huggingface() -> None:
     assert embeddings_mod.HuggingFaceEmbeddings is None
     assert embeddings_mod.HuggingFaceEmbeddingsHolder._clients == {}
 
+
+def test_ingest_file_dispatches_pdf(mock_vectorstore: None) -> None:
+    """POST /api/v1/ingest/file should accept a PDF by extension."""
+    from fastapi.testclient import TestClient
+
+    from backend.main import app
+
+    client = TestClient(app)
+    response = client.post(
+        "/api/v1/ingest/file",
+        files={
+            "file": (
+                "handbook.pdf",
+                _build_pdf("Hello OmniRAG"),
+                "application/pdf",
+            )
+        },
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["source"] == "handbook.pdf"
+    assert body["stored_count"] >= 1
+    assert isinstance(body["document_count"], int)
+    assert isinstance(body["chunk_count"], int)
+
+
+def test_ingest_file_dispatches_csv(mock_vectorstore: None) -> None:
+    """POST /api/v1/ingest/file should accept a CSV by extension."""
+    from fastapi.testclient import TestClient
+
+    from backend.main import app
+
+    client = TestClient(app)
+    response = client.post(
+        "/api/v1/ingest/file",
+        files={
+            "file": (
+                "catalog.csv",
+                b"Title,Price\nWidget,9.99\n",
+                "text/csv",
+            )
+        },
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["source"] == "catalog.csv"
+
+
+def test_ingest_file_rejects_unsupported_extension() -> None:
+    """POST /api/v1/ingest/file should reject non-PDF/CSV uploads with 400."""
+    from fastapi.testclient import TestClient
+
+    from backend.main import app
+
+    client = TestClient(app)
+    response = client.post(
+        "/api/v1/ingest/file",
+        files={"file": ("notes.txt", b"plain text", "text/plain")},
+    )
+    assert response.status_code == 400
+    assert "pdf" in response.json()["detail"].lower()
+
+
+def test_ingest_pdf_rejects_empty_file() -> None:
+    """Empty uploads should return HTTP 400, not a 500."""
+    from fastapi.testclient import TestClient
+
+    from backend.main import app
+
+    client = TestClient(app)
+    response = client.post(
+        "/api/v1/ingest/pdf",
+        files={"file": ("empty.pdf", b"", "application/pdf")},
+    )
+    assert response.status_code == 400
+    assert "empty" in str(response.json()["detail"]).lower()
+
+
+def test_ingest_csv_rejects_header_only_file(mock_vectorstore: None) -> None:
+    """A CSV with headers but no rows should return HTTP 400."""
+    from fastapi.testclient import TestClient
+
+    from backend.main import app
+
+    client = TestClient(app)
+    response = client.post(
+        "/api/v1/ingest/csv",
+        files={"file": ("empty.csv", b"Title,Price\n", "text/csv")},
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"]
+
+
+def test_ingest_url_rejects_invalid_url() -> None:
+    """Malformed URLs should fail Pydantic validation with HTTP 422."""
+    from fastapi.testclient import TestClient
+
+    from backend.main import app
+
+    client = TestClient(app)
+    response = client.post(
+        "/api/v1/ingest/url",
+        json={"url": "not-a-url", "collection_name": "docs"},
+    )
+    assert response.status_code == 422
+    assert response.json()["detail"]
+
+
+def test_ingest_url_empty_page_returns_400(
+    monkeypatch: pytest.MonkeyPatch,
+    mock_vectorstore: None,
+) -> None:
+    """A page with no extractable text should return HTTP 400."""
+    from fastapi.testclient import TestClient
+
+    from backend.main import app
+
+    monkeypatch.setattr("backend.api.v1.ingestion.load_url", lambda url: [])
+    client = TestClient(app)
+    response = client.post(
+        "/api/v1/ingest/url",
+        json={"url": "https://example.com/blank"},
+    )
+    assert response.status_code == 400
+    assert "extractable" in str(response.json()["detail"]).lower()
+
+
+def test_ingest_store_rejects_empty_page_content() -> None:
+    """Prepared documents with blank page_content should return HTTP 422."""
+    from fastapi.testclient import TestClient
+
+    from backend.main import app
+
+    client = TestClient(app)
+    response = client.post(
+        "/api/v1/ingest/store",
+        json={
+            "collection_name": "manual_chunks",
+            "documents": [{"page_content": "", "metadata": {}}],
+        },
+    )
+    assert response.status_code == 422
+

@@ -221,6 +221,22 @@ def list_collections() -> list[str]:
     return sorted(names)
 
 
+def collection_exists(collection_name: str) -> bool:
+    """Return True if a sanitized collection name already exists.
+
+    Args:
+        collection_name: Logical collection name.
+
+    Returns:
+        True when the collection is present in ChromaDB.
+    """
+    name = normalize_collection_name(collection_name)
+    try:
+        return name in set(list_collections())
+    except VectorStoreError:
+        return False
+
+
 def _chroma_metadata(metadata: dict[str, Any] | None) -> dict[str, Any]:
     """Coerce LangChain metadata into Chroma-supported scalar values."""
     clean: dict[str, str | int | float | bool] = {}

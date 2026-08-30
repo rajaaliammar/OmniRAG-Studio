@@ -11,6 +11,7 @@ from langchain_core.documents import Document
 from backend.config import Settings
 from backend.vectorstore.chroma_db import (
     add_documents_to_vectorstore,
+    collection_exists,
     delete_collection,
     get_or_create_collection,
     list_collections,
@@ -222,6 +223,13 @@ def test_add_list_search_and_delete(chroma_tmp: Path) -> None:
 
     delete_collection("phase3_test")
     assert "phase3_test" not in list_collections()
+
+
+def test_collection_exists(chroma_tmp: Path) -> None:
+    """collection_exists should distinguish missing vs created collections."""
+    assert collection_exists("missing_col") is False
+    get_or_create_collection("present_col")
+    assert collection_exists("present_col") is True
 
 
 def test_add_documents_rejects_empty(chroma_tmp: Path) -> None:
