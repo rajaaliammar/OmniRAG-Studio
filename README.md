@@ -37,7 +37,7 @@ PDF / CSV / URL
 | Vector store | `backend/vectorstore/` | Local HuggingFace embeddings, ChromaDB, retriever. |
 | RAG | `backend/rag/` | Prompt, chain, citations, in-process session memory. |
 | Analytics | `backend/analytics/` | SQLite logging (placeholder until a later phase). |
-| Frontend | `frontend/` | Streamlit UI; talks to the API only via `frontend/utils/api_client.py`. |
+| Frontend | `frontend/` | Next.js dashboard (App Router, Tailwind, shadcn/ui). |
 | Tests | `tests/` | pytest, mirroring backend packages. |
 
 ## Setup
@@ -100,11 +100,16 @@ Health check: `GET http://127.0.0.1:8000/health` → `{"status":"ok","app":"Omni
 
 Interactive docs (Swagger UI): [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs).
 
-### Optional Streamlit UI
+### Frontend (Next.js)
 
 ```bash
-streamlit run frontend/app.py
+cd frontend
+npm install
+copy .env.example .env.local
+npm run dev
 ```
+
+Open [http://localhost:3000](http://localhost:3000). The dashboard polls `GET /health` from the FastAPI backend.
 
 ## API endpoints
 
