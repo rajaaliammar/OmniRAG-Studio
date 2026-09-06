@@ -6,12 +6,14 @@ from typing import Any, Mapping
 
 from langchain_core.documents import Document
 
+_SNIPPET_CHARS = 220
 
-def format_citations(documents: list[Any]) -> list[dict[str, str]]:
+
+def format_citations(documents: list[Any]) -> list[dict[str, Any]]:
     """Turn retrieved hits into citation payloads.
 
-    Each item is ``{"source": "...", "page/row": "..."}``. The locator is a
-    page number, CSV row index, or URL when those metadata fields exist.
+    Each item includes ``source``, ``page/row``, optional ``score``, and a
+    short ``snippet`` preview when content is available.
 
     Args:
         documents: Retriever hits (dicts with ``metadata``) or LangChain
@@ -20,7 +22,7 @@ def format_citations(documents: list[Any]) -> list[dict[str, str]]:
     Returns:
         Deduplicated citation mappings in retrieval order.
     """
-    citations: list[dict[str, str]] = []
+    citations: list[dict[str, Any]] = []
     seen: set[tuple[str, str]] = set()
     for item in documents:
         metadata = _metadata_of(item)
@@ -30,7 +32,14 @@ def format_citations(documents: list[Any]) -> list[dict[str, str]]:
         if key in seen:
             continue
         seen.add(key)
-        citations.append({"source": source, "page/row": locator})
+        citation: dict[str, Any] = {"source": source, "page/row": locator}
+        score = _score_of(item)
+        if score is not None:
+            citation["score"] = score
+        snippet = _snippet_of(item)
+        if snippet:
+            citation["snippet"] = snippet
+        citations.append(citation)
     return citations
 
 
@@ -44,6 +53,31 @@ def _metadata_of(item: Any) -> Mapping[str, Any]:
             return meta
         return item
     return {}
+
+
+def _score_of(item: Any) -> float | None:
+    """Return a relevance score when present on a retrieval hit."""
+    if isinstance(item, Mapping) and "score" in item:
+        try:
+            return round(float(item["score"]), 4)
+        except (TypeError, ValueError):
+            return None
+    return None
+
+
+def _snippet_of(item: Any) -> str:
+    """Return a compact text preview from a hit or Document."""
+    content = ""
+    if isinstance(item, Document):
+        content = item.page_content or ""
+    elif isinstance(item, Mapping):
+        content = str(item.get("content") or item.get("page_content") or "")
+    compact = " ".join(content.split())
+    if not compact:
+        return ""
+    if len(compact) <= _SNIPPET_CHARS:
+        return compact
+    return compact[:_SNIPPET_CHARS].rstrip() + "..."
 
 
 def _locator(metadata: Mapping[str, Any]) -> str:

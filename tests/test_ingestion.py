@@ -6,6 +6,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+import requests
 from langchain_core.documents import Document
 
 from backend.ingestion.csv_loader import load_csv
@@ -165,6 +166,141 @@ def test_load_url_strips_chrome_and_keeps_main_text() -> None:
     assert "Copyright" not in content
     assert documents[0].metadata["source"] == "https://example.com/docs"
     assert documents[0].metadata["title"] == "Widget Spec"
+
+
+def test_load_url_filters_github_ui_noise() -> None:
+    """GitHub nav labels must be stripped; pinned repos should remain."""
+    html = """
+    <html>
+      <head><title>rajaaliammar (Ali Ammar)</title></head>
+      <body>
+        <nav class="UnderlineNav">
+          <a>Overview</a><a>Repositories</a><a>Projects</a>
+          <a>Packages</a><a>Stars</a>
+        </nav>
+        <button>Follow</button>
+        <div class="js-profile-editable-area">
+          <span class="p-name">Ali Ammar</span>
+          <span class="p-nickname">rajaaliammar</span>
+          <div class="p-note">Building OmniRAG Studio</div>
+        </div>
+        <ol class="js-pinned-items-reorder-list">
+          <li class="pinned-item-list-item">
+            <a itemprop="url" href="/rajaaliammar/OmniRAG-Studio">
+              <span>OmniRAG-Studio</span>
+            </a>
+            <p class="pinned-item-desc">Multi-source RAG chatbot</p>
+            <span itemprop="programmingLanguage">Python</span>
+          </li>
+          <li class="pinned-item-list-item">
+            <a itemprop="url" href="/rajaaliammar/portfolio-site">
+              <span>portfolio-site</span>
+            </a>
+            <p class="pinned-item-desc">Personal portfolio</p>
+            <span itemprop="programmingLanguage">TypeScript</span>
+          </li>
+        </ol>
+        <div>12 stars</div>
+        <div>Followers</div>
+        <a href="#"> </a>
+      </body>
+    </html>
+    """
+    mock_response = MagicMock()
+    mock_response.headers = {"Content-Type": "text/html; charset=utf-8"}
+    mock_response.content = html.encode("utf-8")
+    mock_response.text = html
+    mock_response.apparent_encoding = "utf-8"
+    mock_response.encoding = "utf-8"
+    mock_response.raise_for_status = MagicMock()
+
+    with patch(
+        "backend.ingestion.web_loader.requests.get",
+        return_value=mock_response,
+    ):
+        documents = load_url("https://github.com/rajaaliammar")
+
+    content = documents[0].page_content
+    assert "OmniRAG-Studio" in content
+    assert "Multi-source RAG chatbot" in content
+    assert "portfolio-site" in content
+    assert "Python" in content
+    assert "Ali Ammar" in content
+    assert "Follow" not in content
+    assert "Overview" not in content
+    assert "Repositories" not in content
+    assert "Packages" not in content
+    assert "Stars" not in content
+    assert "12 stars" not in content.lower()
+
+
+def test_load_url_handles_missing_html_nodes() -> None:
+    """Sparse GitHub markup must not raise NoneType attribute errors."""
+    html = """
+    <html><head><title>sparse</title></head>
+    <body>
+      <div class="js-profile-editable-area"></div>
+      <ol class="js-pinned-items-reorder-list">
+        <li class="pinned-item-list-item"></li>
+      </ol>
+    </body></html>
+    """
+    mock_response = MagicMock()
+    mock_response.headers = {"Content-Type": "text/html"}
+    mock_response.content = html.encode("utf-8")
+    mock_response.text = html
+    mock_response.apparent_encoding = "utf-8"
+    mock_response.encoding = "utf-8"
+    mock_response.raise_for_status = MagicMock()
+
+    with patch(
+        "backend.ingestion.web_loader.requests.get",
+        return_value=mock_response,
+    ):
+        documents = load_url("https://github.com/example")
+
+    assert documents[0].page_content
+    assert "sparse" in documents[0].page_content
+
+
+def test_load_url_maps_http_errors_to_ingestion_error() -> None:
+    """HTTP failures must become IngestionError (API 400), never raw crashes."""
+    mock_response = MagicMock()
+    mock_response.status_code = 403
+    mock_response.raise_for_status.side_effect = requests.HTTPError(
+        "403 Client Error",
+        response=mock_response,
+    )
+
+    with patch(
+        "backend.ingestion.web_loader.requests.get",
+        return_value=mock_response,
+    ):
+        with pytest.raises(IngestionError, match="Access denied|403"):
+            load_url("https://github.com/some-user")
+
+
+def test_load_url_uses_browser_user_agent() -> None:
+    """Fetch requests should send a mainstream browser User-Agent."""
+    html = "<html><head><title>Docs</title></head><body><main><p>Hello world content here</p></main></body></html>"
+    mock_response = MagicMock()
+    mock_response.headers = {"Content-Type": "text/html"}
+    mock_response.content = html.encode("utf-8")
+    mock_response.text = html
+    mock_response.apparent_encoding = "utf-8"
+    mock_response.encoding = "utf-8"
+    mock_response.raise_for_status = MagicMock()
+
+    with patch(
+        "backend.ingestion.web_loader.requests.get",
+        return_value=mock_response,
+    ) as mocked_get:
+        documents = load_url("https://example.com/page")
+
+    assert "Hello world" in documents[0].page_content
+    headers = mocked_get.call_args.kwargs["headers"]
+    assert "Mozilla" in headers["User-Agent"]
+    assert "Chrome" in headers["User-Agent"]
 
 
 def test_load_web_is_alias_for_load_url() -> None:

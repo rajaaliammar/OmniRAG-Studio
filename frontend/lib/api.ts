@@ -120,3 +120,60 @@ export async function ingestUrl(
   );
   return data;
 }
+
+export type ChatCitation = {
+  source: string;
+  "page/row": string;
+  score?: number | null;
+  snippet?: string | null;
+};
+
+export type ChatQueryPayload = {
+  query: string;
+  collectionName: string;
+  sessionId?: string | null;
+};
+
+export type ChatQueryResponse = {
+  answer: string;
+  citations: ChatCitation[];
+  session_id: string;
+};
+
+export type ClearChatResponse = {
+  session_id: string;
+  cleared: boolean;
+};
+
+/** Ask a grounded question against a Chroma collection. */
+export async function chatQuery(
+  payload: ChatQueryPayload,
+): Promise<ChatQueryResponse> {
+  const body: {
+    query: string;
+    collection_name: string;
+    session_id?: string;
+  } = {
+    query: payload.query,
+    collection_name: payload.collectionName,
+  };
+  if (payload.sessionId) {
+    body.session_id = payload.sessionId;
+  }
+  const { data } = await apiClient.post<ChatQueryResponse>(
+    "/api/v1/chat/query",
+    body,
+  );
+  return data;
+}
+
+/** Clear in-process conversational memory for a session. */
+export async function clearChatSession(
+  sessionId: string,
+): Promise<ClearChatResponse> {
+  const { data } = await apiClient.post<ClearChatResponse>(
+    "/api/v1/chat/clear",
+    { session_id: sessionId },
+  );
+  return data;
+}

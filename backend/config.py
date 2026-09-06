@@ -60,6 +60,10 @@ class Settings(BaseSettings):
     llm_model: str = "gpt-4o-mini"
     rag_top_k: int = 4
     rag_score_threshold: float = 0.0
+    rag_candidate_multiplier: int = 3
+    # Hard floor: keep any hit at >= 10% cosine relevance for LLM context.
+    rag_min_relevance: float = 0.10
+    rag_relative_score_floor: float = 0.05
     chat_memory_max_turns: int = 12
 
     @field_validator("openai_api_key", mode="before")

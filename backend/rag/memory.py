@@ -38,6 +38,8 @@ class ConversationMemory:
         """
         cleaned_id = (session_id or "").strip()
         cleaned_role = (role or "").strip().lower() or "user"
+        if cleaned_role not in {"user", "assistant"}:
+            cleaned_role = "user"
         cleaned = (content or "").strip()
         if not cleaned_id or not cleaned:
             return
@@ -62,18 +64,22 @@ class ConversationMemory:
             return list(self._sessions.get(cleaned_id, []))
 
     def format_for_prompt(self, session_id: str) -> str:
-        """Render history as plain text for the grounded user prompt.
+        """Render history as explicit ``User:`` / ``Assistant:`` lines.
 
         Args:
             session_id: Conversation identifier.
 
         Returns:
-            A readable transcript, or an empty string.
+            A numbered readable transcript, or an empty string.
         """
         lines: list[str] = []
+        user_turn = 0
         for turn in self.history(session_id):
-            label = "User" if turn.role == "user" else "Assistant"
-            lines.append(f"{label}: {turn.content}")
+            if turn.role == "user":
+                user_turn += 1
+                lines.append(f"User (turn {user_turn}): {turn.content}")
+            else:
+                lines.append(f"Assistant: {turn.content}")
         return "\n".join(lines)
 
     def clear(self, session_id: str) -> bool:

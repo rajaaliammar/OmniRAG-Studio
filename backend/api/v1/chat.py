@@ -69,7 +69,7 @@ class ChatQueryRequest(BaseModel):
 
 
 class Citation(BaseModel):
-    """One retrieved source locator."""
+    """One retrieved source locator with optional grounding details."""
 
     model_config = ConfigDict(populate_by_name=True)
 
@@ -79,6 +79,14 @@ class Citation(BaseModel):
         alias="page/row",
         serialization_alias="page/row",
         description="Page number, CSV row index, or URL.",
+    )
+    score: float | None = Field(
+        default=None,
+        description="Optional cosine relevance score from retrieval.",
+    )
+    snippet: str | None = Field(
+        default=None,
+        description="Optional preview of the retrieved chunk text.",
     )
 
 
@@ -179,6 +187,8 @@ def chat_query(body: ChatQueryRequest) -> ChatQueryResponse:
             {
                 "source": item.get("source", "unknown"),
                 "page/row": item.get("page/row", ""),
+                "score": item.get("score"),
+                "snippet": item.get("snippet"),
             }
         )
         for item in result.citations
