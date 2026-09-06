@@ -103,15 +103,15 @@ export function CitationList({ citations }: CitationListProps) {
         const icon = chip.kind === "web" ? "🔗" : "📄";
         const className = cn(
           "chip-shimmer group relative inline-flex max-w-full items-center gap-1 rounded-full",
-          "border border-zinc-700/70 bg-zinc-950/55 px-2.5 py-1 text-[11px] leading-none text-zinc-300",
-          "transition-all duration-200 hover:scale-[1.03] hover:border-violet-400/40 hover:bg-zinc-900/80 hover:text-zinc-50",
-          "hover:shadow-[0_0_18px_rgba(139,92,246,0.18)]",
+          "border border-slate-700/70 bg-slate-950/55 px-2.5 py-1 text-[11px] leading-none text-slate-300",
+          "transition-all duration-300 hover:scale-[1.02] hover:border-cyan-400/45 hover:bg-slate-900/80 hover:text-slate-50",
+          "hover:shadow-[0_0_18px_rgba(6,182,212,0.22)]",
         );
 
         const tooltip = (
           <span
             role="tooltip"
-            className="pointer-events-none absolute bottom-[calc(100%+8px)] left-1/2 z-20 hidden w-max max-w-[16rem] -translate-x-1/2 rounded-lg border border-zinc-700/80 bg-zinc-950/95 px-2.5 py-1.5 text-[10px] leading-snug text-zinc-300 opacity-0 shadow-xl backdrop-blur-md transition-opacity group-hover:block group-hover:opacity-100 group-focus-visible:block group-focus-visible:opacity-100"
+            className="pointer-events-none absolute bottom-[calc(100%+8px)] left-1/2 z-20 hidden w-max max-w-[16rem] -translate-x-1/2 rounded-lg border border-slate-700/80 bg-slate-950/95 px-2.5 py-1.5 text-[10px] leading-snug text-slate-300 opacity-0 shadow-xl backdrop-blur-md transition-opacity duration-300 group-hover:block group-hover:opacity-100 group-focus-visible:block group-focus-visible:opacity-100"
           >
             {chip.detail}
           </span>

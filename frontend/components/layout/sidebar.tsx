@@ -60,7 +60,7 @@ export function Sidebar({
           <motion.div
             key="sidebar-overlay"
             aria-hidden
-            className="fixed inset-0 z-40 bg-zinc-950/70 backdrop-blur-sm lg:hidden"
+            className="fixed inset-0 z-40 bg-slate-950/70 backdrop-blur-sm lg:hidden"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -71,7 +71,7 @@ export function Sidebar({
 
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-zinc-800/80 bg-zinc-950/90 text-zinc-100 backdrop-blur-xl lg:static lg:translate-x-0",
+          "fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-slate-800/80 bg-slate-950/90 text-slate-100 backdrop-blur-xl lg:static lg:translate-x-0",
         )}
       >
         <div
@@ -80,15 +80,15 @@ export function Sidebar({
             mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
           )}
         >
-          <div className="flex items-center gap-3 border-b border-zinc-800/80 px-4 py-4">
-            <div className="flex size-10 items-center justify-center rounded-xl accent-gradient shadow-[0_0_24px_rgba(139,92,246,0.35)]">
+          <div className="group/brand flex items-center gap-3 border-b border-slate-800/80 px-4 py-4">
+            <div className="brand-logo size-10">
               <Database className="size-4 text-white" />
             </div>
             <div>
-              <p className="font-heading text-sm font-semibold tracking-tight">
+              <p className="brand-wordmark group-hover/brand:brightness-110">
                 OmniRAG Studio
               </p>
-              <p className="text-xs text-zinc-400">Collection workspace</p>
+              <p className="text-xs text-slate-400">Collection workspace</p>
             </div>
           </div>
 
@@ -101,10 +101,10 @@ export function Sidebar({
                     key={id}
                     type="button"
                     className={cn(
-                      "relative flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm transition-colors",
+                      "relative flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm transition-all duration-300",
                       isActive
-                        ? "text-zinc-50"
-                        : "text-zinc-400 hover:bg-zinc-900/70 hover:text-zinc-100",
+                        ? "text-slate-50"
+                        : "text-slate-400 hover:bg-slate-900/70 hover:text-slate-100",
                     )}
                     onClick={() => {
                       setActiveNav(id);
@@ -114,7 +114,7 @@ export function Sidebar({
                     {isActive ? (
                       <motion.span
                         layoutId="sidebar-active-tab"
-                        className="absolute inset-0 rounded-xl border border-violet-500/30 bg-violet-500/15 shadow-[0_0_20px_rgba(139,92,246,0.15)]"
+                        className="absolute inset-0 rounded-xl border border-cyan-400/35 bg-cyan-500/15 shadow-[0_0_20px_rgba(6,182,212,0.18)]"
                         transition={{ type: "spring", stiffness: 420, damping: 34 }}
                       />
                     ) : null}
@@ -125,10 +125,10 @@ export function Sidebar({
               })}
             </nav>
 
-            <Separator className="my-4 bg-zinc-800/80" />
+            <Separator className="my-4 bg-slate-800/80" />
 
             <div className="space-y-3">
-              <div className="flex items-center gap-2 px-1 text-xs font-medium uppercase tracking-wide text-zinc-500">
+              <div className="flex items-center gap-2 px-1 text-xs font-medium uppercase tracking-wide text-slate-500">
                 <FolderOpen className="size-3.5" />
                 Collections
               </div>
@@ -144,10 +144,10 @@ export function Sidebar({
                         onCloseMobile();
                       }}
                       className={cn(
-                        "relative flex w-full items-center rounded-xl px-3 py-2 text-left text-sm transition-colors",
+                        "relative flex w-full items-center rounded-xl px-3 py-2 text-left text-sm transition-all duration-300",
                         isActive
-                          ? "text-zinc-50"
-                          : "text-zinc-400 hover:bg-zinc-900/70 hover:text-zinc-100",
+                          ? "text-slate-50"
+                          : "text-slate-400 hover:bg-slate-900/70 hover:text-slate-100",
                       )}
                     >
                       {isActive ? (
@@ -169,7 +169,7 @@ export function Sidebar({
                 <Input
                   name="collectionName"
                   placeholder="New collection"
-                  className="h-9 bg-zinc-950/70"
+                  className="h-9 bg-slate-950/70"
                   aria-label="New collection name"
                 />
                 <Button type="submit" size="icon-sm" variant="outline">

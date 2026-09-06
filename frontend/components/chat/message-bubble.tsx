@@ -22,7 +22,7 @@ type MessageBubbleProps = {
   message: ChatMessage;
 };
 
-/** Gemini-style dark message bubble with fade-in motion. */
+/** Gemini-style dark message bubble with neon hover micro-interactions. */
 export function MessageBubble({ message }: MessageBubbleProps) {
   const isUser = message.role === "user";
 
@@ -36,22 +36,22 @@ export function MessageBubble({ message }: MessageBubbleProps) {
     >
       <div
         className={cn(
-          "mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full border",
+          "mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full border transition-all duration-300",
           isUser
-            ? "accent-gradient border-transparent text-white shadow-[0_0_18px_rgba(139,92,246,0.35)]"
-            : "border-zinc-700/80 bg-zinc-900/80 text-emerald-300",
+            ? "accent-gradient border-transparent text-white shadow-[0_0_18px_rgba(6,182,212,0.35)]"
+            : "border-slate-700/80 bg-slate-900/80 text-emerald-300",
         )}
       >
         {isUser ? <UserRound className="size-4" /> : <Bot className="size-4" />}
       </div>
       <div
         className={cn(
-          "max-w-[min(100%,36rem)] rounded-2xl px-4 py-3 text-sm shadow-lg",
+          "max-w-[min(100%,36rem)] rounded-2xl px-4 py-3 text-sm shadow-lg transition-all duration-300",
           isUser
-            ? "accent-gradient text-white shadow-[0_8px_28px_rgba(139,92,246,0.22)]"
+            ? "accent-gradient text-slate-950 shadow-[0_8px_28px_rgba(6,182,212,0.22)] hover:scale-[1.02] hover:shadow-[0_10px_32px_rgba(16,185,129,0.28)]"
             : message.isError
               ? "border border-red-500/30 bg-red-500/10 text-red-200"
-              : "glass-soft text-zinc-100",
+              : "glass-soft text-slate-100 hover:scale-[1.02] hover:border-cyan-400/35 hover:shadow-[0_0_24px_rgba(6,182,212,0.14)]",
         )}
       >
         <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
@@ -71,14 +71,14 @@ export function TypingIndicator() {
       animate={{ opacity: 1, y: 0 }}
       className="flex gap-3"
     >
-      <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full border border-zinc-700/80 bg-zinc-900/80 text-emerald-300">
+      <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full border border-slate-700/80 bg-slate-900/80 text-emerald-300">
         <Bot className="size-4" />
       </div>
       <div className="glass-soft rounded-2xl px-4 py-3 shadow-lg">
         <div className="flex items-center gap-1.5" aria-label="Assistant is thinking">
-          <span className="size-2 animate-bounce rounded-full bg-violet-400 [animation-delay:-0.2s]" />
+          <span className="size-2 animate-bounce rounded-full bg-cyan-400 [animation-delay:-0.2s]" />
           <span className="size-2 animate-bounce rounded-full bg-emerald-400 [animation-delay:-0.1s]" />
-          <span className="size-2 animate-bounce rounded-full bg-violet-300" />
+          <span className="size-2 animate-bounce rounded-full bg-blue-400" />
         </div>
       </div>
     </motion.div>

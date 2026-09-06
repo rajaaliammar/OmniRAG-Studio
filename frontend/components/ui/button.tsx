@@ -4,21 +4,21 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "group/button btn-shimmer inline-flex shrink-0 items-center justify-center rounded-xl border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap outline-none select-none transition-all duration-200 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "group/button btn-shimmer inline-flex shrink-0 items-center justify-center rounded-xl border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap outline-none select-none transition-all duration-300 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 hover:scale-[1.02] active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
         default:
-          "accent-gradient text-primary-foreground shadow-[0_0_24px_rgba(139,92,246,0.25)] hover:brightness-110 hover:shadow-[0_0_28px_rgba(52,211,153,0.28)]",
+          "accent-gradient text-slate-950 shadow-[0_0_24px_rgba(6,182,212,0.28)] hover:brightness-110 hover:shadow-[0_0_32px_rgba(16,185,129,0.35)]",
         outline:
-          "border-zinc-700/80 bg-zinc-900/50 text-zinc-100 hover:border-violet-500/40 hover:bg-zinc-800/70 hover:text-zinc-50",
+          "border-slate-600/80 bg-slate-900/55 text-slate-100 hover:border-cyan-400/45 hover:bg-slate-800/75 hover:text-slate-50 hover:shadow-[0_0_20px_rgba(6,182,212,0.18)]",
         secondary:
-          "border-zinc-700/60 bg-zinc-800/70 text-zinc-100 hover:bg-zinc-700/80",
+          "border-slate-600/60 bg-slate-800/75 text-slate-100 hover:bg-slate-700/80 hover:border-emerald-400/30",
         ghost:
-          "text-zinc-300 hover:bg-zinc-800/70 hover:text-zinc-50",
+          "text-slate-300 hover:bg-slate-800/70 hover:text-slate-50",
         destructive:
           "bg-red-500/15 text-red-300 hover:bg-red-500/25 focus-visible:ring-red-400/30",
-        link: "text-violet-300 underline-offset-4 hover:underline",
+        link: "text-cyan-300 underline-offset-4 hover:underline",
       },
       size: {
         default:

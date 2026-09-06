@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { AnimatePresence, motion } from "motion/react";
 import { CheckCircle2, CircleAlert, X } from "lucide-react";
@@ -58,7 +58,7 @@ export function ToastStack({ toasts, onDismiss }: ToastStackProps) {
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <p className="text-sm font-medium text-zinc-100">{toast.title}</p>
+                  <p className="text-sm font-medium text-slate-100">{toast.title}</p>
                   <Badge
                     variant={toast.tone === "success" ? "secondary" : "destructive"}
                     className={
@@ -70,7 +70,7 @@ export function ToastStack({ toasts, onDismiss }: ToastStackProps) {
                     {toast.tone}
                   </Badge>
                 </div>
-                <p className="mt-1 text-sm text-zinc-400">{toast.description}</p>
+                <p className="mt-1 text-sm text-slate-400">{toast.description}</p>
               </div>
               <Button
                 type="button"

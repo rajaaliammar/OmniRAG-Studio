@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { motion } from "motion/react";
 import { useState } from "react";
@@ -24,7 +24,7 @@ export function DashboardShell() {
   } = useCollections();
 
   return (
-    <div className="flex min-h-screen bg-transparent text-zinc-100">
+    <div className="flex min-h-screen bg-transparent text-slate-100">
       <Sidebar
         collections={collections}
         activeCollection={activeCollection}

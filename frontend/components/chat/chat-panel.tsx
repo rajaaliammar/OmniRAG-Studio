@@ -198,13 +198,13 @@ export function ChatPanel({ collectionName }: ChatPanelProps) {
   return (
     <>
       <Card className="flex h-full min-h-[540px] flex-col">
-        <CardHeader className="border-b border-zinc-800/60">
+        <CardHeader className="border-b border-slate-800/60">
           <div className="flex items-start justify-between gap-3">
             <div>
               <CardTitle>Chat</CardTitle>
               <CardDescription>
                 Ask grounded questions against{" "}
-                <span className="font-medium text-zinc-200">
+                <span className="font-medium text-slate-200">
                   {collectionName}
                 </span>
                 .
@@ -213,19 +213,19 @@ export function ChatPanel({ collectionName }: ChatPanelProps) {
             <div className="flex flex-wrap items-center justify-end gap-2">
               <Badge
                 variant="secondary"
-                className="border-violet-500/20 bg-violet-500/10 text-violet-200"
+                className="border-cyan-500/25 bg-cyan-500/10 text-cyan-200"
               >
                 Live
               </Badge>
               {sessionId ? (
                 <Badge
                   variant="outline"
-                  className="max-w-[10rem] truncate border-zinc-700 text-zinc-300"
+                  className="max-w-[10rem] truncate border-slate-700 text-slate-300"
                 >
                   {sessionId.slice(0, 8)}…
                 </Badge>
               ) : (
-                <Badge variant="outline" className="border-zinc-700 text-zinc-400">
+                <Badge variant="outline" className="border-slate-700 text-slate-400">
                   New session
                 </Badge>
               )}
@@ -244,7 +244,7 @@ export function ChatPanel({ collectionName }: ChatPanelProps) {
         </CardHeader>
 
         <CardContent className="flex min-h-0 flex-1 flex-col gap-4 pt-4">
-          <ScrollArea className="min-h-0 flex-1 rounded-2xl border border-zinc-800/70 bg-zinc-950/40">
+          <ScrollArea className="min-h-0 flex-1 rounded-2xl border border-slate-800/70 bg-slate-950/40">
             <div className="space-y-4 p-4">
               <AnimatePresence mode="popLayout">
                 {messages.length === 0 && !isThinking ? (
@@ -253,18 +253,18 @@ export function ChatPanel({ collectionName }: ChatPanelProps) {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="flex min-h-[18rem] flex-col items-center justify-center gap-3 px-4 text-center text-zinc-400"
+                    className="flex min-h-[18rem] flex-col items-center justify-center gap-3 px-4 text-center text-slate-400"
                   >
-                    <div className="flex size-12 items-center justify-center rounded-2xl border border-zinc-700/70 bg-zinc-900/60">
-                      <MessageSquareQuote className="size-6 text-violet-300" />
+                    <div className="flex size-12 items-center justify-center rounded-2xl border border-slate-700/70 bg-slate-900/60">
+                      <MessageSquareQuote className="size-6 text-cyan-300" />
                     </div>
                     <div className="max-w-sm space-y-1">
-                      <p className="text-sm font-medium text-zinc-100">
+                      <p className="text-sm font-medium text-slate-100">
                         Start a grounded conversation
                       </p>
                       <p className="text-sm">
                         Ask about content in{" "}
-                        <span className="font-medium text-zinc-200">
+                        <span className="font-medium text-slate-200">
                           {collectionName}
                         </span>
                         . Source chips appear when retrieval finds matches.
@@ -292,7 +292,7 @@ export function ChatPanel({ collectionName }: ChatPanelProps) {
             <label className="sr-only" htmlFor={inputId}>
               Chat message
             </label>
-            <div className="flex items-end gap-2 rounded-2xl border border-zinc-700/70 bg-zinc-950/55 p-2 shadow-[0_0_0_1px_rgba(139,92,246,0.08)_inset] backdrop-blur-sm transition-colors focus-within:border-violet-500/40">
+            <div className="flex items-end gap-2 rounded-2xl border border-slate-700/70 bg-slate-950/55 p-2 shadow-[0_0_0_1px_rgba(6,182,212,0.08)_inset] backdrop-blur-sm transition-all duration-300 focus-within:border-cyan-400/45 focus-within:shadow-[0_0_20px_rgba(6,182,212,0.12)]">
               <textarea
                 id={inputId}
                 value={input}
@@ -305,7 +305,7 @@ export function ChatPanel({ collectionName }: ChatPanelProps) {
                 onKeyDown={handleKeyDown}
                 rows={2}
                 placeholder="Ask a question about the selected collection…"
-                className="min-h-[2.75rem] max-h-32 w-full resize-none bg-transparent px-2 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-500"
+                className="min-h-[2.75rem] max-h-32 w-full resize-none bg-transparent px-2 py-2 text-sm text-slate-100 outline-none placeholder:text-slate-500"
                 disabled={isThinking}
               />
               <Button
@@ -321,7 +321,7 @@ export function ChatPanel({ collectionName }: ChatPanelProps) {
                 )}
               </Button>
             </div>
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-slate-500">
               Press Enter to send · Shift+Enter for a new line
             </p>
           </form>

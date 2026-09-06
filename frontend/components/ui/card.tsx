@@ -1,5 +1,8 @@
+"use client";
+
 import * as React from "react"
 
+import { InteractiveSurface } from "@/components/ui/interactive-surface"
 import { cn } from "@/lib/utils"
 
 function Card({
@@ -8,11 +11,11 @@ function Card({
   ...props
 }: React.ComponentProps<"div"> & { size?: "default" | "sm" }) {
   return (
-    <div
+    <InteractiveSurface
       data-slot="card"
       data-size={size}
       className={cn(
-        "group/card glass-panel flex flex-col gap-(--card-spacing) overflow-hidden rounded-2xl py-(--card-spacing) text-sm text-card-foreground [--card-spacing:--spacing(4)] has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:[--card-spacing:--spacing(3)] data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl",
+        "group/card glass-panel flex flex-col gap-(--card-spacing) overflow-hidden rounded-2xl py-(--card-spacing) text-sm text-card-foreground [--card-spacing:--spacing(4)] has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:[--card-spacing:--spacing(3)] data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl hover:scale-[1.01]",
         className
       )}
       {...props}
@@ -38,7 +41,7 @@ function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="card-title"
       className={cn(
-        "font-heading text-base leading-snug font-semibold tracking-tight text-zinc-100 group-data-[size=sm]/card:text-sm",
+        "font-heading text-base leading-snug font-semibold tracking-tight text-slate-100 group-data-[size=sm]/card:text-sm",
         className
       )}
       {...props}
@@ -50,7 +53,7 @@ function CardDescription({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="card-description"
-      className={cn("text-sm text-zinc-400", className)}
+      className={cn("text-sm text-slate-400", className)}
       {...props}
     />
   )
@@ -84,7 +87,7 @@ function CardFooter({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="card-footer"
       className={cn(
-        "flex items-center rounded-b-xl border-t border-zinc-800/80 bg-zinc-950/40 p-(--card-spacing)",
+        "flex items-center rounded-b-xl border-t border-slate-700/70 bg-slate-950/40 p-(--card-spacing)",
         className
       )}
       {...props}

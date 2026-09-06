@@ -43,7 +43,7 @@ export function Header({
     : "—";
 
   return (
-    <header className="flex h-16 shrink-0 items-center justify-between border-b border-zinc-800/80 bg-zinc-950/50 px-4 backdrop-blur-md lg:px-6">
+    <header className="flex h-16 shrink-0 items-center justify-between border-b border-slate-800/80 bg-slate-950/55 px-4 backdrop-blur-md lg:px-6">
       <div className="flex items-center gap-3">
         <Button
           type="button"
@@ -56,7 +56,7 @@ export function Header({
           <Menu className="size-4" />
         </Button>
         <div>
-          <p className="text-sm font-medium text-zinc-100">Active collection</p>
+          <p className="text-sm font-medium text-slate-100">Active collection</p>
           <p className="accent-gradient-text text-xs font-medium">
             {activeCollection}
           </p>
@@ -65,13 +65,13 @@ export function Header({
 
       <div className="flex items-center gap-2 sm:gap-3">
         <div className="hidden text-right sm:block">
-          <p className="text-xs text-zinc-500">Backend</p>
-          <p className="font-mono text-xs text-zinc-400">{API_BASE_URL}</p>
+          <p className="text-xs text-slate-500">Backend</p>
+          <p className="font-mono text-xs text-slate-400">{API_BASE_URL}</p>
         </div>
         <Badge
           variant="outline"
           className={cn(
-            "border-zinc-700/80 bg-zinc-900/70 px-2.5 py-1 text-zinc-200",
+            "border-slate-700/80 bg-slate-900/70 px-2.5 py-1 text-slate-200 transition-all duration-300",
             healthState === "healthy" && "border-emerald-500/40 bg-emerald-500/10",
             healthState === "degraded" && "border-amber-500/40 bg-amber-500/10",
             healthState === "offline" && "border-red-500/40 bg-red-500/10",
@@ -81,7 +81,7 @@ export function Header({
             className={cn(
               "mr-1.5 inline-block size-2 rounded-full",
               healthState === "healthy" && "glow-online bg-emerald-400",
-              healthState === "loading" && "animate-pulse bg-zinc-400",
+              healthState === "loading" && "animate-pulse bg-slate-400",
               healthState === "degraded" && "bg-amber-400",
               healthState === "offline" && "bg-red-400",
             )}
@@ -110,8 +110,8 @@ export function Header({
           />
         </Button>
         <div className="hidden text-right md:block">
-          <p className="text-xs text-zinc-300">{appName || "FastAPI"}</p>
-          <p className="text-xs text-zinc-500">Checked {checkedLabel}</p>
+          <p className="text-xs text-slate-300">{appName || "FastAPI"}</p>
+          <p className="text-xs text-slate-500">Checked {checkedLabel}</p>
         </div>
       </div>
     </header>

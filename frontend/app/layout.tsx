@@ -30,7 +30,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`dark ${outfit.variable} ${syne.variable} ${geistMono.variable} h-full`}
     >
-      <body className="flex min-h-full flex-col font-sans text-zinc-100">
+      <body className="flex min-h-full flex-col font-sans text-slate-100">
         {children}
       </body>
     </html>
