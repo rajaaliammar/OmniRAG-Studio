@@ -2,6 +2,7 @@
 
 import { motion } from "motion/react";
 import {
+  ArrowDownToLine,
   CheckCircle2,
   ChevronDown,
   FileUp,
@@ -529,18 +530,31 @@ export function IngestionPanel({
                 onDragLeave={handleDragState}
                 onDrop={handleDrop}
                 onClick={() => fileInputRef.current?.click()}
-                whileHover={{ scale: 1.01 }}
-                whileTap={{ scale: 0.99 }}
+                whileHover={{ scale: 1.015 }}
+                whileTap={{ scale: 0.985 }}
                 className={cn(
-                  "flex min-h-48 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed px-6 py-8 text-center transition-all duration-300",
+                  "group/drop flex min-h-48 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed px-6 py-8 text-center transition-all duration-300",
                   isDragging
                     ? "border-cyan-400/60 bg-cyan-500/10 shadow-[0_0_28px_rgba(6,182,212,0.22)]"
                     : "border-slate-700/70 bg-slate-950/35 hover:border-emerald-400/40 hover:bg-slate-900/50",
                 )}
               >
-                <div className="flex size-12 items-center justify-center rounded-2xl border border-slate-700/70 bg-slate-900/70">
-                  <UploadCloud className="size-6 text-emerald-300" />
-                </div>
+                <motion.div
+                  className="relative flex size-12 items-center justify-center rounded-2xl border border-slate-700/70 bg-slate-900/70"
+                  animate={
+                    isDragging
+                      ? { y: [0, 4, 0], scale: [1, 1.05, 1] }
+                      : { y: 0, scale: 1 }
+                  }
+                  transition={
+                    isDragging
+                      ? { duration: 1.1, repeat: Infinity, ease: "easeInOut" }
+                      : { duration: 0.2 }
+                  }
+                >
+                  <UploadCloud className="size-6 text-emerald-300 transition-transform duration-300 group-hover/drop:-translate-y-0.5" />
+                  <ArrowDownToLine className="absolute -bottom-1 size-3.5 text-cyan-300 opacity-0 transition-all duration-300 group-hover/drop:translate-y-1 group-hover/drop:opacity-100" />
+                </motion.div>
                 <div className="space-y-1">
                   <p className="text-sm font-medium text-slate-100">
                     Drop your PDF or CSV here, or click to browse

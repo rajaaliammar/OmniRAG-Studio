@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion } from "motion/react";
 import {
+  ArrowRight,
   Database,
   FolderOpen,
   LayoutDashboard,
@@ -71,7 +72,7 @@ export function Sidebar({
 
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-slate-800/80 bg-slate-950/90 text-slate-100 backdrop-blur-xl lg:static lg:translate-x-0",
+          "fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-slate-800/80 bg-slate-950/80 text-slate-100 backdrop-blur-xl lg:static lg:z-10 lg:translate-x-0",
         )}
       >
         <div
@@ -97,11 +98,13 @@ export function Sidebar({
               {NAV_ITEMS.map(({ id, label, icon: Icon }) => {
                 const isActive = activeNav === id;
                 return (
-                  <button
+                  <motion.button
                     key={id}
                     type="button"
+                    whileHover={{ x: 2 }}
+                    whileTap={{ scale: 0.98 }}
                     className={cn(
-                      "relative flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm transition-all duration-300",
+                      "group/nav relative flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm transition-all duration-300",
                       isActive
                         ? "text-slate-50"
                         : "text-slate-400 hover:bg-slate-900/70 hover:text-slate-100",
@@ -118,9 +121,17 @@ export function Sidebar({
                         transition={{ type: "spring", stiffness: 420, damping: 34 }}
                       />
                     ) : null}
-                    <Icon className="relative z-10 size-4" />
-                    <span className="relative z-10">{label}</span>
-                  </button>
+                    <Icon className="relative z-10 size-4 transition-transform duration-300 group-hover/nav:scale-110" />
+                    <span className="relative z-10 flex-1 text-left">{label}</span>
+                    <ArrowRight
+                      className={cn(
+                        "relative z-10 size-3.5 transition-all duration-300",
+                        isActive
+                          ? "translate-x-0 opacity-80"
+                          : "-translate-x-1 opacity-0 group-hover/nav:translate-x-0 group-hover/nav:opacity-70",
+                      )}
+                    />
+                  </motion.button>
                 );
               })}
             </nav>

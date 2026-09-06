@@ -20,21 +20,29 @@ export type ChatMessage = {
 
 type MessageBubbleProps = {
   message: ChatMessage;
+  index?: number;
 };
 
-/** Gemini-style dark message bubble with neon hover micro-interactions. */
-export function MessageBubble({ message }: MessageBubbleProps) {
+/** Gemini-style dark message bubble with staggered cinematic entry. */
+export function MessageBubble({ message, index = 0 }: MessageBubbleProps) {
   const isUser = message.role === "user";
 
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, y: 10, scale: 0.98 }}
+      initial={{ opacity: 0, y: 14, scale: 0.96 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ duration: 0.28, ease: "easeOut" }}
+      transition={{
+        duration: 0.32,
+        delay: Math.min(index * 0.04, 0.24),
+        ease: [0.22, 1, 0.36, 1],
+      }}
       className={cn("flex gap-3", isUser ? "flex-row-reverse" : "flex-row")}
     >
-      <div
+      <motion.div
+        initial={{ scale: 0.8, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ delay: Math.min(index * 0.04, 0.24) + 0.05, duration: 0.25 }}
         className={cn(
           "mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full border transition-all duration-300",
           isUser
@@ -43,7 +51,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
         )}
       >
         {isUser ? <UserRound className="size-4" /> : <Bot className="size-4" />}
-      </div>
+      </motion.div>
       <div
         className={cn(
           "max-w-[min(100%,36rem)] rounded-2xl px-4 py-3 text-sm shadow-lg transition-all duration-300",

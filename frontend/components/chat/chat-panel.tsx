@@ -272,8 +272,12 @@ export function ChatPanel({ collectionName }: ChatPanelProps) {
                     </div>
                   </motion.div>
                 ) : (
-                  messages.map((message) => (
-                    <MessageBubble key={message.id} message={message} />
+                  messages.map((message, index) => (
+                    <MessageBubble
+                      key={message.id}
+                      message={message}
+                      index={index}
+                    />
                   ))
                 )}
               </AnimatePresence>
@@ -308,18 +312,25 @@ export function ChatPanel({ collectionName }: ChatPanelProps) {
                 className="min-h-[2.75rem] max-h-32 w-full resize-none bg-transparent px-2 py-2 text-sm text-slate-100 outline-none placeholder:text-slate-500"
                 disabled={isThinking}
               />
-              <Button
-                type="submit"
-                size="icon"
-                disabled={isThinking || !input.trim()}
-                aria-label="Send message"
+              <motion.div
+                whileHover={{ scale: 1.06 }}
+                whileTap={{ scale: 0.94 }}
+                className="group/send"
               >
-                {isThinking ? (
-                  <LoaderCircle className="size-4 animate-spin" />
-                ) : (
-                  <SendHorizontal className="size-4" />
-                )}
-              </Button>
+                <Button
+                  type="submit"
+                  size="icon"
+                  disabled={isThinking || !input.trim()}
+                  aria-label="Send message"
+                  className="relative overflow-hidden"
+                >
+                  {isThinking ? (
+                    <LoaderCircle className="size-4 animate-spin" />
+                  ) : (
+                    <SendHorizontal className="size-4 transition-transform duration-300 group-hover/send:translate-x-0.5 group-hover/send:-translate-y-0.5" />
+                  )}
+                </Button>
+              </motion.div>
             </div>
             <p className="text-xs text-slate-500">
               Press Enter to send · Shift+Enter for a new line

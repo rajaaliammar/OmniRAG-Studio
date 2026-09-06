@@ -3,6 +3,7 @@
 import { motion } from "motion/react";
 import { useState } from "react";
 
+import { AmbientBackground } from "@/components/layout/ambient-background";
 import { ChatPanel } from "@/components/chat/chat-panel";
 import { IngestionPanel } from "@/components/ingestion/ingestion-panel";
 import { ErrorBoundary } from "@/components/shared/error-boundary";
@@ -24,7 +25,9 @@ export function DashboardShell() {
   } = useCollections();
 
   return (
-    <div className="flex min-h-screen bg-transparent text-slate-100">
+    <div className="relative flex min-h-screen bg-transparent text-slate-100">
+      <AmbientBackground />
+
       <Sidebar
         collections={collections}
         activeCollection={activeCollection}
@@ -34,7 +37,7 @@ export function DashboardShell() {
         onCloseMobile={() => setMobileOpen(false)}
       />
 
-      <div className="flex min-h-screen min-w-0 flex-1 flex-col">
+      <div className="relative z-10 flex min-h-screen min-w-0 flex-1 flex-col">
         <Header
           activeCollection={activeCollection}
           healthState={state}

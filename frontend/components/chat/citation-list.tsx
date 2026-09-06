@@ -126,9 +126,15 @@ export function CitationList({ citations }: CitationListProps) {
               rel="noreferrer noopener"
               title={chip.detail}
               className={className}
-              initial={{ opacity: 0, y: 4 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.04, duration: 0.2 }}
+              initial={{ opacity: 0, y: 8, scale: 0.94 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{
+                delay: index * 0.05,
+                duration: 0.28,
+                ease: [0.22, 1, 0.36, 1],
+              }}
+              whileHover={{ y: -1, scale: 1.03 }}
+              whileTap={{ scale: 0.98 }}
             >
               <span aria-hidden="true">{icon}</span>
               <span className="truncate font-medium">{chip.label}</span>
@@ -143,9 +149,15 @@ export function CitationList({ citations }: CitationListProps) {
             title={chip.detail}
             tabIndex={0}
             className={className}
-            initial={{ opacity: 0, y: 4 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.04, duration: 0.2 }}
+            initial={{ opacity: 0, y: 8, scale: 0.94 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{
+              delay: index * 0.05,
+              duration: 0.28,
+              ease: [0.22, 1, 0.36, 1],
+            }}
+            whileHover={{ y: -1, scale: 1.03 }}
+            whileTap={{ scale: 0.98 }}
           >
             <span aria-hidden="true">{icon}</span>
             <span className="truncate font-medium">{chip.label}</span>
