@@ -16,11 +16,11 @@ export default function GlobalError({
   }, [error]);
 
   return (
-    <html lang="en">
-      <body className="flex min-h-screen items-center justify-center bg-background px-4 text-foreground">
-        <div className="max-w-md space-y-4 rounded-xl border border-border bg-card p-6 text-center shadow-sm">
-          <h2 className="text-lg font-semibold">Something went wrong</h2>
-          <p className="text-sm text-muted-foreground">
+    <html lang="en" className="dark">
+      <body className="flex min-h-screen items-center justify-center bg-zinc-950 px-4 text-zinc-100">
+        <div className="glass-panel max-w-md space-y-4 rounded-2xl p-6 text-center shadow-2xl">
+          <h2 className="font-heading text-lg font-semibold">Something went wrong</h2>
+          <p className="text-sm text-zinc-400">
             The page hit an unexpected frontend error. Retry to restore the app.
           </p>
           <Button type="button" onClick={reset}>

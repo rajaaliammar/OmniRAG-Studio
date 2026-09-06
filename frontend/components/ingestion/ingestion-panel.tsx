@@ -1,5 +1,6 @@
 ﻿"use client";
 
+import { motion } from "motion/react";
 import {
   CheckCircle2,
   ChevronDown,
@@ -341,29 +342,39 @@ export function IngestionPanel({
   return (
     <>
       <Card className="flex h-full min-h-[540px] flex-col">
-        <CardHeader>
+        <CardHeader className="border-b border-zinc-800/60">
           <div className="flex items-center justify-between gap-2">
             <div>
               <CardTitle>Ingestion</CardTitle>
               <CardDescription>
                 Upload PDF or CSV files, or ingest a public URL into{" "}
-                <span className="font-medium text-foreground">{effectiveCollectionName}</span>.
+                <span className="font-medium text-zinc-200">
+                  {effectiveCollectionName}
+                </span>
+                .
               </CardDescription>
             </div>
-            <Badge variant="secondary">Phase 2</Badge>
+            <Badge
+              variant="secondary"
+              className="border-emerald-500/20 bg-emerald-500/10 text-emerald-200"
+            >
+              Index
+            </Badge>
           </div>
         </CardHeader>
-        <CardContent className="flex min-h-0 flex-1 flex-col gap-4">
+        <CardContent className="flex min-h-0 flex-1 flex-col gap-4 pt-4">
           <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
-            <section className="space-y-3 rounded-xl border border-border p-4">
+            <section className="glass-soft space-y-3 rounded-2xl p-4">
               <div className="space-y-1">
-                <h3 className="text-sm font-semibold">Collection target</h3>
-                <p className="text-sm text-muted-foreground">
+                <h3 className="text-sm font-semibold text-zinc-100">
+                  Collection target
+                </h3>
+                <p className="text-sm text-zinc-400">
                   Choose an existing collection or create a new one before indexing.
                 </p>
               </div>
 
-              <div className="flex flex-wrap gap-2">
+              <div className="relative flex flex-wrap gap-2">
                 <Button
                   type="button"
                   variant={activeMode === "existing" ? "default" : "outline"}
@@ -382,11 +393,13 @@ export function IngestionPanel({
 
               {activeMode === "existing" ? (
                 <div className="space-y-2">
-                  <Label htmlFor={`${inputId}-collection`}>Collection</Label>
+                  <Label htmlFor={`${inputId}-collection`} className="text-zinc-300">
+                    Collection
+                  </Label>
                   <div className="relative">
                     <select
                       id={`${inputId}-collection`}
-                      className="flex h-10 w-full appearance-none rounded-lg border border-input bg-background px-3 pr-10 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                      className="flex h-10 w-full appearance-none rounded-xl border border-zinc-700/70 bg-zinc-950/60 px-3 pr-10 text-sm text-zinc-100 outline-none transition-colors focus-visible:border-violet-500/50 focus-visible:ring-3 focus-visible:ring-violet-500/25"
                       value={collectionName}
                       onChange={(event) => onCollectionSelected(event.target.value)}
                     >
@@ -396,12 +409,17 @@ export function IngestionPanel({
                         </option>
                       ))}
                     </select>
-                    <ChevronDown className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                    <ChevronDown className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-zinc-500" />
                   </div>
                 </div>
               ) : (
                 <div className="space-y-2">
-                  <Label htmlFor={`${inputId}-new-collection`}>New collection name</Label>
+                  <Label
+                    htmlFor={`${inputId}-new-collection`}
+                    className="text-zinc-300"
+                  >
+                    New collection name
+                  </Label>
                   <Input
                     id={`${inputId}-new-collection`}
                     value={newCollectionName}
@@ -413,67 +431,85 @@ export function IngestionPanel({
               )}
             </section>
 
-            <section className="space-y-3 rounded-xl border border-border p-4">
+            <section className="glass-soft space-y-3 rounded-2xl p-4">
               <div className="flex items-center justify-between gap-2">
                 <div>
-                  <h3 className="text-sm font-semibold">Processing status</h3>
-                  <p className="text-sm text-muted-foreground">Live progress while the backend validates and indexes content.</p>
+                  <h3 className="text-sm font-semibold text-zinc-100">
+                    Processing status
+                  </h3>
+                  <p className="text-sm text-zinc-400">
+                    Live progress while the backend validates and indexes content.
+                  </p>
                 </div>
                 <Badge
-                  variant={
-                    uploadStatus === "success"
-                      ? "secondary"
-                      : uploadStatus === "error"
-                        ? "destructive"
-                        : "outline"
-                  }
+                  variant="outline"
+                  className={cn(
+                    "border-zinc-700 text-zinc-300",
+                    uploadStatus === "success" &&
+                      "border-emerald-500/40 bg-emerald-500/10 text-emerald-200",
+                    uploadStatus === "error" &&
+                      "border-red-500/40 bg-red-500/10 text-red-200",
+                  )}
                 >
                   {uploadLabel}
                 </Badge>
               </div>
               <div className="space-y-2">
-                <div className="h-2 overflow-hidden rounded-full bg-muted">
-                  <div
+                <div className="h-2 overflow-hidden rounded-full bg-zinc-800/80">
+                  <motion.div
                     className={cn(
-                      "h-full rounded-full transition-all",
-                      uploadStatus === "error" ? "bg-destructive" : "bg-primary",
+                      "h-full rounded-full",
+                      uploadStatus === "error"
+                        ? "bg-red-400"
+                        : "accent-gradient",
                     )}
-                    style={{ width: `${Math.max(uploadProgress, uploadStatus === "success" ? 100 : 0)}%` }}
+                    initial={false}
+                    animate={{
+                      width: `${Math.max(
+                        uploadProgress,
+                        uploadStatus === "success" ? 100 : 0,
+                      )}%`,
+                    }}
+                    transition={{ duration: 0.25 }}
                   />
                 </div>
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <div className="flex items-center justify-between text-xs text-zinc-500">
                   <span>{uploadLabel}</span>
                   <span>{uploadProgress}%</span>
                 </div>
               </div>
               {lastResult ? (
-                <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-3 text-sm dark:border-emerald-900 dark:bg-emerald-950/30">
+                <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm">
                   <div className="flex items-start gap-2">
-                    <CheckCircle2 className="mt-0.5 size-4 text-emerald-600" />
+                    <CheckCircle2 className="mt-0.5 size-4 text-emerald-400" />
                     <div className="space-y-1">
-                      <p className="font-medium text-foreground">Latest ingest succeeded</p>
-                      <p className="text-muted-foreground">
-                        {lastResult.storedCount} chunks stored from {lastResult.source}.
+                      <p className="font-medium text-zinc-100">
+                        Latest ingest succeeded
+                      </p>
+                      <p className="text-zinc-400">
+                        {lastResult.storedCount} chunks stored from{" "}
+                        {lastResult.source}.
                       </p>
                     </div>
                   </div>
                 </div>
               ) : (
-                <div className="rounded-xl border border-dashed border-border p-3 text-sm text-muted-foreground">
-                  Start a file or URL ingest to see indexed chunk totals and extracted snippets.
+                <div className="rounded-xl border border-dashed border-zinc-700/70 p-3 text-sm text-zinc-500">
+                  Start a file or URL ingest to see indexed chunk totals and
+                  extracted snippets.
                 </div>
               )}
             </section>
           </div>
 
           <div className="grid min-h-0 flex-1 gap-4 xl:grid-cols-2">
-            <section className="flex flex-col gap-4 rounded-xl border border-border p-4">
+            <section className="glass-soft flex flex-col gap-4 rounded-2xl p-4">
               <div className="space-y-1">
-                <div className="flex items-center gap-2 text-sm font-semibold">
-                  <FileUp className="size-4" />
+                <div className="flex items-center gap-2 text-sm font-semibold text-zinc-100">
+                  <FileUp className="size-4 text-violet-300" />
                   File upload
                 </div>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-zinc-400">
                   Drag and drop a PDF or CSV file, or browse your device.
                 </p>
               </div>
@@ -486,41 +522,49 @@ export function IngestionPanel({
                 onChange={handleFileInputChange}
               />
 
-              <button
+              <motion.button
                 type="button"
                 onDragEnter={handleDragState}
                 onDragOver={handleDragState}
                 onDragLeave={handleDragState}
                 onDrop={handleDrop}
                 onClick={() => fileInputRef.current?.click()}
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.99 }}
                 className={cn(
-                  "flex min-h-48 flex-col items-center justify-center gap-3 rounded-xl border border-dashed px-6 py-8 text-center transition-colors",
+                  "flex min-h-48 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed px-6 py-8 text-center transition-colors",
                   isDragging
-                    ? "border-primary bg-primary/5"
-                    : "border-border hover:bg-muted/40",
+                    ? "border-violet-400/60 bg-violet-500/10 shadow-[0_0_28px_rgba(139,92,246,0.2)]"
+                    : "border-zinc-700/70 bg-zinc-950/35 hover:border-emerald-400/40 hover:bg-zinc-900/50",
                 )}
               >
-                <UploadCloud className="size-8 text-muted-foreground" />
+                <div className="flex size-12 items-center justify-center rounded-2xl border border-zinc-700/70 bg-zinc-900/70">
+                  <UploadCloud className="size-6 text-emerald-300" />
+                </div>
                 <div className="space-y-1">
-                  <p className="text-sm font-medium">
+                  <p className="text-sm font-medium text-zinc-100">
                     Drop your PDF or CSV here, or click to browse
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    Maximum file size: 25 MB
-                  </p>
+                  <p className="text-xs text-zinc-500">Maximum file size: 25 MB</p>
                 </div>
                 <div className="flex flex-wrap justify-center gap-2">
-                  <Badge variant="outline">PDF</Badge>
-                  <Badge variant="outline">CSV</Badge>
+                  <Badge variant="outline" className="border-zinc-700 text-zinc-300">
+                    PDF
+                  </Badge>
+                  <Badge variant="outline" className="border-zinc-700 text-zinc-300">
+                    CSV
+                  </Badge>
                 </div>
-              </button>
+              </motion.button>
 
-              <div className="rounded-xl border border-border bg-muted/30 p-3 text-sm">
+              <div className="rounded-xl border border-zinc-800/80 bg-zinc-950/45 p-3 text-sm">
                 {selectedFile ? (
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="truncate font-medium">{selectedFile.name}</p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="truncate font-medium text-zinc-100">
+                        {selectedFile.name}
+                      </p>
+                      <p className="text-xs text-zinc-500">
                         {formatFileSize(selectedFile.size)}
                       </p>
                     </div>
@@ -531,9 +575,13 @@ export function IngestionPanel({
                       <Button
                         type="button"
                         onClick={() => void handleUploadSubmit()}
-                        disabled={uploadStatus === "uploading" || uploadStatus === "indexing"}
+                        disabled={
+                          uploadStatus === "uploading" ||
+                          uploadStatus === "indexing"
+                        }
                       >
-                        {uploadStatus === "uploading" || uploadStatus === "indexing" ? (
+                        {uploadStatus === "uploading" ||
+                        uploadStatus === "indexing" ? (
                           <>
                             <LoaderCircle className="size-4 animate-spin" />
                             Processing
@@ -548,7 +596,7 @@ export function IngestionPanel({
                     </div>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-2 text-muted-foreground">
+                  <div className="flex items-center gap-2 text-zinc-500">
                     <Table className="size-4" />
                     No file selected yet.
                   </div>
@@ -556,20 +604,22 @@ export function IngestionPanel({
               </div>
             </section>
 
-            <section className="flex min-h-0 flex-col gap-4 rounded-xl border border-border p-4">
+            <section className="glass-soft flex min-h-0 flex-col gap-4 rounded-2xl p-4">
               <div className="space-y-1">
-                <div className="flex items-center gap-2 text-sm font-semibold">
-                  <Globe className="size-4" />
+                <div className="flex items-center gap-2 text-sm font-semibold text-zinc-100">
+                  <Globe className="size-4 text-emerald-300" />
                   URL ingestion
                 </div>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-zinc-400">
                   Submit a public page URL for extraction, chunking, and indexing.
                 </p>
               </div>
 
               <form className="flex flex-col gap-3" onSubmit={handleUrlSubmit}>
                 <div className="space-y-2">
-                  <Label htmlFor={`${inputId}-url`}>Public URL</Label>
+                  <Label htmlFor={`${inputId}-url`} className="text-zinc-300">
+                    Public URL
+                  </Label>
                   <Input
                     id={`${inputId}-url`}
                     type="url"
@@ -582,9 +632,10 @@ export function IngestionPanel({
                     }}
                     placeholder="https://example.com/docs"
                     aria-invalid={Boolean(urlError)}
+                    className="h-11"
                   />
                   {urlError ? (
-                    <p className="text-xs text-destructive">{urlError}</p>
+                    <p className="text-xs text-red-300">{urlError}</p>
                   ) : null}
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -615,25 +666,35 @@ export function IngestionPanel({
                 </div>
               </form>
 
-              <Separator />
+              <Separator className="bg-zinc-800/80" />
 
               <div className="flex min-h-0 flex-1 flex-col gap-3">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold">Preview snippets</p>
+                  <p className="text-sm font-semibold text-zinc-100">
+                    Preview snippets
+                  </p>
                   {lastResult ? (
-                    <Badge variant="outline">{lastResult.chunkCount} chunks</Badge>
+                    <Badge
+                      variant="outline"
+                      className="border-zinc-700 text-zinc-300"
+                    >
+                      {lastResult.chunkCount} chunks
+                    </Badge>
                   ) : null}
                 </div>
-                <ScrollArea className="min-h-0 flex-1 rounded-xl border border-border bg-muted/20">
+                <ScrollArea className="min-h-0 flex-1 rounded-xl border border-zinc-800/70 bg-zinc-950/40">
                   <div className="space-y-3 p-4">
                     {lastResult?.snippets.length ? (
                       lastResult.snippets.map((snippet) => (
-                        <div key={snippet} className="rounded-lg border border-border bg-background p-3 text-sm text-muted-foreground">
+                        <div
+                          key={snippet}
+                          className="rounded-lg border border-zinc-800/80 bg-zinc-900/50 p-3 text-sm text-zinc-400"
+                        >
                           {snippet}
                         </div>
                       ))
                     ) : (
-                      <div className="flex min-h-40 flex-col items-center justify-center gap-3 text-center text-sm text-muted-foreground">
+                      <div className="flex min-h-40 flex-col items-center justify-center gap-3 text-center text-sm text-zinc-500">
                         <XCircle className="size-5" />
                         Run an ingest to preview extracted chunk snippets.
                       </div>
@@ -645,7 +706,7 @@ export function IngestionPanel({
           </div>
 
           {inlineError ? (
-            <div className="rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+            <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
               {inlineError}
             </div>
           ) : null}

@@ -1,5 +1,7 @@
 "use client";
 
+import { motion } from "motion/react";
+
 import type { ChatCitation } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
@@ -10,8 +12,10 @@ type CitationListProps = {
 type SourceChip = {
   key: string;
   label: string;
+  fullSource: string;
   href: string | null;
   kind: "file" | "web";
+  detail: string;
 };
 
 function basenameFromPath(source: string): string {
@@ -37,30 +41,40 @@ function domainFromUrl(url: string): string {
 
 function toSourceChip(citation: ChatCitation, index: number): SourceChip {
   const source = (citation.source || "").trim() || "unknown";
+  const locator = citation["page/row"] || "";
   const isWeb =
     source.startsWith("http://") ||
     source.startsWith("https://") ||
     source.toLowerCase().includes("github.com");
+
+  const detailParts = [source];
+  if (locator && locator !== source) {
+    detailParts.push(`Ref: ${locator}`);
+  }
 
   if (isWeb) {
     const href = source.startsWith("http") ? source : `https://${source}`;
     return {
       key: `${source}-${index}`,
       label: domainFromUrl(href),
+      fullSource: source,
       href,
       kind: "web",
+      detail: detailParts.join(" · "),
     };
   }
 
   return {
     key: `${source}-${index}`,
     label: basenameFromPath(source),
+    fullSource: source,
     href: null,
     kind: "file",
+    detail: detailParts.join(" · "),
   };
 }
 
-/** Compact Gemini-style source chips — name/domain only, no raw previews. */
+/** Compact Gemini-style source chips with hover tooltips (no raw previews). */
 export function CitationList({ citations }: CitationListProps) {
   if (!citations.length) {
     return null;
@@ -85,35 +99,58 @@ export function CitationList({ citations }: CitationListProps) {
   return (
     <div className="mt-3 flex flex-wrap items-center gap-1.5">
       <span className="sr-only">Sources</span>
-      {chips.map((chip) => {
+      {chips.map((chip, index) => {
         const icon = chip.kind === "web" ? "🔗" : "📄";
         const className = cn(
-          "inline-flex max-w-full items-center gap-1 rounded-full border border-border/70",
-          "bg-muted/40 px-2.5 py-1 text-[11px] leading-none text-muted-foreground",
-          "transition-colors hover:border-border hover:bg-muted hover:text-foreground",
+          "chip-shimmer group relative inline-flex max-w-full items-center gap-1 rounded-full",
+          "border border-zinc-700/70 bg-zinc-950/55 px-2.5 py-1 text-[11px] leading-none text-zinc-300",
+          "transition-all duration-200 hover:scale-[1.03] hover:border-violet-400/40 hover:bg-zinc-900/80 hover:text-zinc-50",
+          "hover:shadow-[0_0_18px_rgba(139,92,246,0.18)]",
+        );
+
+        const tooltip = (
+          <span
+            role="tooltip"
+            className="pointer-events-none absolute bottom-[calc(100%+8px)] left-1/2 z-20 hidden w-max max-w-[16rem] -translate-x-1/2 rounded-lg border border-zinc-700/80 bg-zinc-950/95 px-2.5 py-1.5 text-[10px] leading-snug text-zinc-300 opacity-0 shadow-xl backdrop-blur-md transition-opacity group-hover:block group-hover:opacity-100 group-focus-visible:block group-focus-visible:opacity-100"
+          >
+            {chip.detail}
+          </span>
         );
 
         if (chip.href) {
           return (
-            <a
+            <motion.a
               key={chip.key}
               href={chip.href}
               target="_blank"
               rel="noreferrer noopener"
-              title={chip.href}
+              title={chip.detail}
               className={className}
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.04, duration: 0.2 }}
             >
               <span aria-hidden="true">{icon}</span>
               <span className="truncate font-medium">{chip.label}</span>
-            </a>
+              {tooltip}
+            </motion.a>
           );
         }
 
         return (
-          <span key={chip.key} title={chip.label} className={className}>
+          <motion.span
+            key={chip.key}
+            title={chip.detail}
+            tabIndex={0}
+            className={className}
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.04, duration: 0.2 }}
+          >
             <span aria-hidden="true">{icon}</span>
             <span className="truncate font-medium">{chip.label}</span>
-          </span>
+            {tooltip}
+          </motion.span>
         );
       })}
     </div>

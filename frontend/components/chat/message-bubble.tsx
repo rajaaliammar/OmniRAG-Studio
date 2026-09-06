@@ -1,5 +1,6 @@
 "use client";
 
+import { motion } from "motion/react";
 import { Bot, UserRound } from "lucide-react";
 
 import { CitationList } from "@/components/chat/citation-list";
@@ -21,35 +22,36 @@ type MessageBubbleProps = {
   message: ChatMessage;
 };
 
-/** Single chat turn bubble for user or assistant messages. */
+/** Gemini-style dark message bubble with fade-in motion. */
 export function MessageBubble({ message }: MessageBubbleProps) {
   const isUser = message.role === "user";
 
   return (
-    <div
-      className={cn(
-        "flex gap-3",
-        isUser ? "flex-row-reverse" : "flex-row",
-      )}
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 10, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: 0.28, ease: "easeOut" }}
+      className={cn("flex gap-3", isUser ? "flex-row-reverse" : "flex-row")}
     >
       <div
         className={cn(
-          "mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full",
+          "mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full border",
           isUser
-            ? "bg-primary text-primary-foreground"
-            : "bg-muted text-muted-foreground",
+            ? "accent-gradient border-transparent text-white shadow-[0_0_18px_rgba(139,92,246,0.35)]"
+            : "border-zinc-700/80 bg-zinc-900/80 text-emerald-300",
         )}
       >
         {isUser ? <UserRound className="size-4" /> : <Bot className="size-4" />}
       </div>
       <div
         className={cn(
-          "max-w-[min(100%,36rem)] rounded-2xl px-4 py-3 text-sm shadow-sm",
+          "max-w-[min(100%,36rem)] rounded-2xl px-4 py-3 text-sm shadow-lg",
           isUser
-            ? "bg-primary text-primary-foreground"
+            ? "accent-gradient text-white shadow-[0_8px_28px_rgba(139,92,246,0.22)]"
             : message.isError
-              ? "border border-destructive/30 bg-destructive/5 text-destructive"
-              : "border border-border bg-background text-foreground",
+              ? "border border-red-500/30 bg-red-500/10 text-red-200"
+              : "glass-soft text-zinc-100",
         )}
       >
         <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
@@ -57,24 +59,28 @@ export function MessageBubble({ message }: MessageBubbleProps) {
           <CitationList citations={message.citations} />
         ) : null}
       </div>
-    </div>
+    </motion.div>
   );
 }
 
 /** Animated typing indicator shown while the assistant is generating. */
 export function TypingIndicator() {
   return (
-    <div className="flex gap-3">
-      <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="flex gap-3"
+    >
+      <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full border border-zinc-700/80 bg-zinc-900/80 text-emerald-300">
         <Bot className="size-4" />
       </div>
-      <div className="rounded-2xl border border-border bg-background px-4 py-3 shadow-sm">
+      <div className="glass-soft rounded-2xl px-4 py-3 shadow-lg">
         <div className="flex items-center gap-1.5" aria-label="Assistant is thinking">
-          <span className="size-2 animate-bounce rounded-full bg-muted-foreground [animation-delay:-0.2s]" />
-          <span className="size-2 animate-bounce rounded-full bg-muted-foreground [animation-delay:-0.1s]" />
-          <span className="size-2 animate-bounce rounded-full bg-muted-foreground" />
+          <span className="size-2 animate-bounce rounded-full bg-violet-400 [animation-delay:-0.2s]" />
+          <span className="size-2 animate-bounce rounded-full bg-emerald-400 [animation-delay:-0.1s]" />
+          <span className="size-2 animate-bounce rounded-full bg-violet-300" />
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

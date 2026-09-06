@@ -46,8 +46,8 @@ export class ErrorBoundary extends Component<
         <CardHeader>
           <CardTitle>{this.props.title ?? "Panel failed"}</CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-col items-center gap-4 text-center text-sm text-muted-foreground">
-          <TriangleAlert className="size-8 text-destructive" />
+        <CardContent className="flex flex-col items-center gap-4 text-center text-sm text-zinc-400">
+          <TriangleAlert className="size-8 text-red-300" />
           <p>
             Something went wrong while rendering this panel. Retry after the
             current state is reset.
