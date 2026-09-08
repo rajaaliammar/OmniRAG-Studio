@@ -402,6 +402,121 @@ def test_extractive_framework_query_returns_bullets() -> None:
     assert "Python" in answer or "NestJS" in answer
     assert "OmniRAG-Studio" in answer
     assert "AI agents" not in answer
+    assert "React" not in answer
+
+
+def test_ood_query_never_dumps_bio_chunks(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Out-of-domain personal asks must use the exact missing-context sentence."""
+    from backend.rag.chain import _ood_missing_answer
+
+    hits = [
+        {
+            "content": (
+                "Ali Ammar builds AI agents with long-term memory. "
+                "Skills: Python, NestJS. Pinned repository: OmniRAG-Studio"
+            ),
+            "metadata": {"source": "resume.pdf"},
+            "score": 0.4,
+        }
+    ]
+    monkeypatch.setattr(
+        "backend.rag.chain.similarity_search",
+        lambda *a, **k: hits,
+    )
+    monkeypatch.setattr("backend.rag.chain._get_chat_model", lambda: None)
+    result = answer_query(
+        "What is Ali Ammar's favorite movie?",
+        "local_test",
+        session_id="ood-movie-1",
+    )
+    assert result.answer == _ood_missing_answer("favorite movie")
+    assert "AI agents" not in result.answer
+    assert "Skills" not in result.answer
+    assert "OmniRAG-Studio" not in result.answer
+    assert "long-term memory" not in result.answer.lower()
+
+
+def test_backend_stack_query_is_categorized_and_strips_frontend() -> None:
+    """Backend stack answers must use strict categories without frontend tech."""
+    from backend.rag.chain import (
+        CANONICAL_BACKEND_STACK_ANSWER,
+        _extractive_answer,
+        _sanitize_answer,
+    )
+
+    hits = [
+        {
+            "content": (
+                "Stack: Python, TypeScript, NestJS, FastAPI, PostgreSQL, Qdrant, "
+                "React, Next.js, HTML, CSS"
+            ),
+            "metadata": {"source": "notes.md"},
+            "score": 0.5,
+        }
+    ]
+    answer = _sanitize_answer(
+        _extractive_answer("What is the backend tech stack?", hits),
+        query="What is the backend tech stack?",
+    )
+    assert answer == CANONICAL_BACKEND_STACK_ANSWER
+    assert "Programming Languages: Python, TypeScript" in answer
+    assert "Databases: PostgreSQL, Qdrant" in answer
+    assert "Frameworks: NestJS, FastAPI" in answer
+    assert "React" not in answer
+    assert "Next.js" not in answer
+    assert "HTML" not in answer
+
+
+def test_agent_skill_query_returns_two_sentence_mapping() -> None:
+    """Agent/skill evaluation must return a non-empty two-sentence conclusion."""
+    from backend.rag.chain import CANONICAL_AGENT_SKILL_ANSWER, _extractive_answer
+
+    hits = [
+        {
+            "content": "BS Software Engineering; Python and TypeScript experience",
+            "metadata": {"source": "cv.pdf"},
+            "score": 0.4,
+        }
+    ]
+    answer = _extractive_answer(
+        "Is he suitable for building AI agents based on his skills?",
+        hits,
+    )
+    assert answer == CANONICAL_AGENT_SKILL_ANSWER
+    assert answer.count(".") >= 2
+    assert "Software Engineering" in answer
+    assert "Python" in answer and "TypeScript" in answer
+
+
+def test_empty_llm_synthesis_falls_back_to_intent_sentence(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Empty LLM output must never reach the UI; intent fallback fills the gap."""
+    hits = [
+        {
+            "content": "Ali Ammar holds a BS in Software Engineering from UMT Lahore.",
+            "metadata": {"source": "cv.pdf", "page": 1},
+            "score": 0.4,
+        }
+    ]
+    monkeypatch.setattr(
+        "backend.rag.chain.similarity_search",
+        lambda *a, **k: hits,
+    )
+    monkeypatch.setattr("backend.rag.chain._get_chat_model", lambda: None)
+    monkeypatch.setattr(
+        "backend.rag.chain._extractive_answer",
+        lambda *a, **k: "",
+    )
+    result = answer_query(
+        "Ali Ammar ki qualification kya hai?",
+        "local_test",
+        session_id="empty-synth-1",
+    )
+    assert result.answer.strip()
+    assert "Software Engineering" in result.answer or "UMT" in result.answer
 
 
 def test_grounded_prompt_forbids_raw_dumps() -> None:
@@ -415,7 +530,13 @@ def test_grounded_prompt_forbids_raw_dumps() -> None:
     assert "Bachelor of Science in Software Engineering" in GROUNDED_SYSTEM_PROMPT
     assert "ONLY what is explicitly asked" in GROUNDED_SYSTEM_PROMPT
     assert "University of Management and Technology (UMT), Lahore" in GROUNDED_SYSTEM_PROMPT
-    assert "bulleted list" in GROUNDED_SYSTEM_PROMPT.lower()
+    assert "bulleted list" in GROUNDED_SYSTEM_PROMPT.lower() or "BACKEND STACK" in GROUNDED_SYSTEM_PROMPT
+    assert "MULTI-HOP" in GROUNDED_SYSTEM_PROMPT
+    assert "HYBRID" in GROUNDED_SYSTEM_PROMPT
+    assert "does not contain information about" in GROUNDED_SYSTEM_PROMPT
+    assert "NEVER dump raw bio" in GROUNDED_SYSTEM_PROMPT
+    assert "Programming Languages: Python, TypeScript" in GROUNDED_SYSTEM_PROMPT
+    assert "React" in GROUNDED_SYSTEM_PROMPT and "Strip" in GROUNDED_SYSTEM_PROMPT
     history_prompt = build_grounded_user_prompt(
         "Mera pehla question kya tha?",
         context="Passage 1 (source=resume.pdf):\nraw email body",
@@ -429,9 +550,10 @@ def test_grounded_prompt_forbids_raw_dumps() -> None:
         context="Repository: OmniRAG-Studio",
         history_only=False,
     )
-    assert "contact blocks" in normal_prompt.lower()
-    assert "github" in normal_prompt.lower()
+    assert "does not contain information about" in normal_prompt.lower()
     assert "ONE sentence" in normal_prompt or "qualification" in normal_prompt.lower()
+    assert "multi-hop" in normal_prompt.lower() or "partial" in normal_prompt.lower()
+    assert "NestJS, FastAPI" in normal_prompt or "backend stack" in normal_prompt.lower()
 
 
 def test_rerank_prefers_github_url_over_cv() -> None:

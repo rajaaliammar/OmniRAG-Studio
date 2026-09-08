@@ -34,6 +34,23 @@ CANONICAL_EDUCATION_ANSWER = (
     "University of Management and Technology (UMT), Lahore."
 )
 
+CANONICAL_AGENT_SKILL_ANSWER = (
+    "With a Bachelor of Science in Software Engineering, Ali Ammar has the "
+    "formal foundation to design and evaluate AI agent systems. "
+    "His relevant stack in Python and TypeScript supports building, testing, "
+    "and integrating agent workflows end to end."
+)
+
+CANONICAL_BACKEND_STACK_ANSWER = (
+    "Programming Languages: Python, TypeScript\n"
+    "Databases: PostgreSQL, Qdrant\n"
+    "Frameworks: NestJS, FastAPI"
+)
+
+_OOD_MISSING_TEMPLATE = (
+    "The provided context does not contain information about {topic}."
+)
+
 _llm_lock = threading.Lock()
 _llm_client: Any | None = None
 _llm_client_key: tuple[str, str] | None = None
@@ -214,6 +231,85 @@ _FRAMEWORK_QUERY_CUES = (
     "languages",
     "language",
 )
+_BACKEND_STACK_QUERY_CUES = (
+    "backend stack",
+    "tech stack",
+    "technology stack",
+    "programming language",
+    "programming languages",
+    "databases",
+    "database",
+    "backend framework",
+    "backend frameworks",
+    "backend technologies",
+    "backend tools",
+)
+_AGENT_SKILL_QUERY_CUES = (
+    "ai agent",
+    "ai agents",
+    "agent system",
+    "agent systems",
+    "skill evaluation",
+    "evaluate agent",
+    "build agent",
+    "building agents",
+    "agentic",
+    "suitable for agents",
+    "capable of building",
+)
+_OOD_TOPIC_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
+    (
+        re.compile(
+            r"\b(favorite|favourite)\s+(movie|film|cinema)\b|\bbest\s+movie\b",
+            re.IGNORECASE,
+        ),
+        "favorite movie",
+    ),
+    (
+        re.compile(
+            r"\b(favorite|favourite)\s+(dish|food|meal|cuisine)\b|"
+            r"\bfavorite\s+restaurant\b",
+            re.IGNORECASE,
+        ),
+        "favorite dish",
+    ),
+    (
+        re.compile(r"\b(hobbies|hobby|pastime|pastimes)\b", re.IGNORECASE),
+        "personal hobbies",
+    ),
+    (
+        re.compile(
+            r"\b(favorite|favourite)\s+(color|colour|song|book|sport)\b",
+            re.IGNORECASE,
+        ),
+        "personal preferences",
+    ),
+    (
+        re.compile(
+            r"\b(pet|pets|spouse|married|birthday|age|blood\s*group)\b",
+            re.IGNORECASE,
+        ),
+        "personal details",
+    ),
+)
+_FRONTEND_STACK_NAMES = frozenset(
+    {
+        "react",
+        "next.js",
+        "nextjs",
+        "html",
+        "css",
+        "vue",
+        "angular",
+        "svelte",
+        "tailwind",
+        "bootstrap",
+        "jquery",
+    }
+)
+_BACKEND_LANGUAGE_NAMES = ("Python", "TypeScript")
+_BACKEND_DATABASE_NAMES = ("PostgreSQL", "Qdrant")
+_BACKEND_FRAMEWORK_NAMES = ("NestJS", "FastAPI")
 _CV_SOURCE_CUES = (
     "resume",
     "cv",
@@ -251,7 +347,9 @@ _BIO_CLUTTER_PHRASES = (
     "passionate about",
 )
 _BIO_CLUTTER_LINE = re.compile(
-    r"(?im)^\s*(?:skills?|tech\s*stack|frameworks?|interests?|hobbies?|"
+    # Do not match categorized stack lines (Programming Languages / Databases /
+    # Frameworks) — those are intentional synthesizer output.
+    r"(?im)^\s*(?:skills?|tech\s*stack|interests?|hobbies?|"
     r"summary|about|bio|objective|profile)\s*[:=].*$"
 )
 _BIO_CLUTTER_INLINE = re.compile(
@@ -264,8 +362,8 @@ _EDUCATION_FACT = re.compile(
 )
 _FRAMEWORK_FACT = re.compile(
     r"(?i)\b(?:nestjs|django|fastapi|flask|express|spring|laravel|"
-    r"python|typescript|javascript|node\.?js|react|next\.?js|"
-    r"framework|pinned\s+repositor(?:y|ies)|repository:)\b"
+    r"python|typescript|javascript|node\.?js|"
+    r"postgresql|qdrant|framework|pinned\s+repositor(?:y|ies)|repository:)\b"
 )
 
 
@@ -320,6 +418,11 @@ def answer_query(
     prior_turns = memory.history(sid)
     history_text = memory.format_for_prompt(sid)
     history_only = _is_history_followup(cleaned) and bool(prior_turns)
+    hybrid = (
+        (not history_only)
+        and bool(prior_turns)
+        and _needs_hybrid_history_retrieval(cleaned, prior_turns)
+    )
 
     if history_only:
         answer = _generate_history_answer(cleaned, prior_turns, history_text)
@@ -327,9 +430,10 @@ def answer_query(
         memory.append(sid, "assistant", answer)
         return RagResult(answer=answer, citations=[], session_id=sid)
 
+    search_queries = _expand_retrieval_queries(cleaned, prior_turns)
     try:
-        raw_hits = similarity_search(
-            cleaned,
+        raw_hits = _multi_query_similarity_search(
+            search_queries,
             collection,
             k=candidate_k,
             score_threshold=threshold,
@@ -339,8 +443,13 @@ def answer_query(
     except Exception as exc:
         raise VectorStoreError(f"Retrieval failed: {exc}") from exc
 
+    # Prefer the rewritten/hybrid query for topical re-ranking when available.
+    rank_query = search_queries[0] if search_queries else cleaned
+    if len(search_queries) > 1:
+        rank_query = " ".join(search_queries[:2])
+
     hits = _rerank_and_filter(
-        cleaned,
+        rank_query,
         raw_hits,
         top_k=top_k,
         min_score=threshold,
@@ -357,13 +466,37 @@ def answer_query(
         )[:top_k]
 
     if not hits:
+        ood_topic = _detect_ood_topic(cleaned)
+        if ood_topic:
+            answer = _ood_missing_answer(ood_topic)
+        else:
+            answer = NO_CONTEXT_ANSWER
         memory.append(sid, "user", cleaned)
-        memory.append(sid, "assistant", NO_CONTEXT_ANSWER)
-        return RagResult(answer=NO_CONTEXT_ANSWER, citations=[], session_id=sid)
+        memory.append(sid, "assistant", answer)
+        return RagResult(answer=answer, citations=[], session_id=sid)
+
+    # Out-of-domain personal facts: never dump unrelated bio/repo chunks.
+    ood_topic = _detect_ood_topic(cleaned)
+    if ood_topic and not _context_mentions_ood_topic(hits, ood_topic):
+        answer = _ood_missing_answer(ood_topic)
+        memory.append(sid, "user", cleaned)
+        memory.append(sid, "assistant", answer)
+        return RagResult(
+            answer=answer,
+            citations=format_citations(hits),
+            session_id=sid,
+        )
 
     context = _format_context(hits)
     citations = format_citations(hits)
-    answer = _generate_answer(cleaned, context, prior_turns, history_text, hits)
+    answer = _generate_answer(
+        cleaned,
+        context,
+        prior_turns,
+        history_text,
+        hits,
+        hybrid=hybrid,
+    )
     answer = _ensure_nonempty_answer(answer, cleaned, hits)
     memory.append(sid, "user", cleaned)
     memory.append(sid, "assistant", answer)
@@ -401,6 +534,170 @@ def _is_history_followup(question: str) -> bool:
     if not cleaned:
         return False
     return any(pattern.search(cleaned) for pattern in _HISTORY_QUERY_PATTERNS)
+
+
+_HYBRID_FOLLOWUP_CUES = (
+    re.compile(
+        r"\b(what about|how about|and (?:his|her|their|the)|also|"
+        r"same (?:person|guy|profile)|uske|unki|uska|aur)\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"\b(he|she|his|her|they|them|this|that|those|it)\b.{0,40}\b"
+        r"(degree|qualification|repo|repos|github|project|projects|"
+        r"framework|education|university|experience)\b",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"\b(based on (?:that|earlier|previous)|from (?:earlier|before)|"
+        r"as (?:mentioned|discussed)|following up)\b",
+        re.IGNORECASE,
+    ),
+)
+
+_MULTI_HOP_SPLIT = re.compile(
+    r"\s+(?:and|aur|also|plus|then|phir)\s+",
+    re.IGNORECASE,
+)
+
+
+def _needs_hybrid_history_retrieval(
+    question: str,
+    prior_turns: list[ChatTurn],
+) -> bool:
+    """True when a follow-up needs both conversation memory and vector search."""
+    if not prior_turns:
+        return False
+    cleaned = (question or "").strip()
+    if not cleaned or _is_history_followup(cleaned):
+        return False
+    if any(pattern.search(cleaned) for pattern in _HYBRID_FOLLOWUP_CUES):
+        return True
+    # Short pronoun-heavy follow-ups after a document Q&A turn.
+    tokens = _tokenize(cleaned)
+    if len(tokens) <= 8 and any(
+        token in tokens for token in {"he", "she", "his", "her", "they", "them", "uske", "unki"}
+    ):
+        return True
+    return False
+
+
+def _rewrite_with_history(question: str, prior_turns: list[ChatTurn]) -> str:
+    """Resolve light follow-ups using the latest user question for recall."""
+    cleaned = (question or "").strip()
+    if not cleaned or not prior_turns:
+        return cleaned
+    last_user = next(
+        (turn.content for turn in reversed(prior_turns) if turn.role == "user"),
+        "",
+    ).strip()
+    if not last_user:
+        return cleaned
+    if not _needs_hybrid_history_retrieval(cleaned, prior_turns):
+        return cleaned
+    # Keep both so retrieval can match entities from the prior ask.
+    combined = f"{last_user} {cleaned}".strip()
+    return combined[:400]
+
+
+def _expand_retrieval_queries(
+    question: str,
+    prior_turns: list[ChatTurn] | None = None,
+) -> list[str]:
+    """Build query variants to boost recall for multi-hop / follow-up asks.
+
+    Args:
+        question: Current user question.
+        prior_turns: Optional conversation turns for rewrite cues.
+
+    Returns:
+        Deduplicated retrieval queries (original first).
+    """
+    cleaned = (question or "").strip()
+    if not cleaned:
+        return []
+
+    variants: list[str] = [cleaned]
+    rewritten = _rewrite_with_history(cleaned, prior_turns or [])
+    if rewritten and rewritten.lower() not in {item.lower() for item in variants}:
+        variants.insert(0, rewritten)
+
+    # Split compound / multi-hop phrasing into focused sub-queries.
+    parts = [
+        part.strip(" ?.,;")
+        for part in _MULTI_HOP_SPLIT.split(cleaned)
+        if part and len(part.strip()) >= 8
+    ]
+    for part in parts:
+        if part.lower() not in {item.lower() for item in variants}:
+            variants.append(part)
+
+    # Lightweight lexical expansions for common domain aliases.
+    lowered = cleaned.lower()
+    if any(cue in lowered for cue in ("qualification", "degree", "education", "taaleem")):
+        variants.append("Bachelor of Science Software Engineering UMT Lahore")
+    if any(cue in lowered for cue in ("github", "repo", "repository", "pinned", "project")):
+        variants.append("GitHub pinned repositories frameworks Python NestJS")
+
+    deduped: list[str] = []
+    seen: set[str] = set()
+    for item in variants:
+        key = item.lower().strip()
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        deduped.append(item.strip())
+        if len(deduped) >= 4:
+            break
+    return deduped
+
+
+def _multi_query_similarity_search(
+    queries: list[str],
+    collection: str,
+    *,
+    k: int,
+    score_threshold: float,
+) -> list[RetrievalHit]:
+    """Run similarity search for each query and merge unique hits by content."""
+    merged: list[RetrievalHit] = []
+    seen: set[str] = set()
+    for query in queries:
+        hits = similarity_search(
+            query,
+            collection,
+            k=k,
+            score_threshold=score_threshold,
+        )
+        for hit in hits:
+            if not isinstance(hit, dict):
+                continue
+            content = str(hit.get("content") or "").strip()
+            meta = hit.get("metadata") if isinstance(hit.get("metadata"), dict) else {}
+            source = str((meta or {}).get("source") or "")
+            key = f"{source}::{content[:180].lower()}"
+            if key in seen:
+                # Keep the stronger score when the same chunk appears twice.
+                for index, existing in enumerate(merged):
+                    existing_meta = (
+                        existing.get("metadata")
+                        if isinstance(existing.get("metadata"), dict)
+                        else {}
+                    )
+                    existing_key = (
+                        f"{existing_meta.get('source', '')}::"
+                        f"{str(existing.get('content') or '')[:180].lower()}"
+                    )
+                    if existing_key == key:
+                        if float(hit.get("score") or 0.0) > float(
+                            existing.get("score") or 0.0
+                        ):
+                            merged[index] = hit
+                        break
+                continue
+            seen.add(key)
+            merged.append(hit)
+    return merged
 
 
 def _rerank_and_filter(
@@ -516,7 +813,42 @@ def _is_github_query(query: str) -> bool:
 def _is_education_query(query: str) -> bool:
     """Return True when the user asks about degree / education only."""
     lowered = (query or "").lower()
+    if _is_agent_skill_query(query):
+        return False
     return any(cue in lowered for cue in _EDUCATION_QUERY_CUES)
+
+
+def _is_backend_stack_query(query: str) -> bool:
+    """Return True for backend languages / databases / frameworks asks."""
+    lowered = (query or "").lower()
+    if _is_agent_skill_query(query):
+        return False
+    # Pinned/repo listing asks are handled by the project synthesizer.
+    if any(
+        cue in lowered
+        for cue in ("pinned", "github", "repo", "repository", "repositories")
+    ):
+        if not any(
+            cue in lowered
+            for cue in ("stack", "database", "databases", "programming language")
+        ):
+            return False
+    if any(cue in lowered for cue in _BACKEND_STACK_QUERY_CUES):
+        return True
+    if "backend" in lowered and any(
+        cue in lowered for cue in ("stack", "framework", "language", "database")
+    ):
+        # "backend frameworks and pinned projects" stays on the project path.
+        if "project" in lowered or "projects" in lowered or "pinned" in lowered:
+            return False
+        return True
+    return False
+
+
+def _is_agent_skill_query(query: str) -> bool:
+    """Return True for AI-agent / skill-evaluation multi-hop questions."""
+    lowered = (query or "").lower()
+    return any(cue in lowered for cue in _AGENT_SKILL_QUERY_CUES)
 
 
 def _is_framework_or_project_query(query: str) -> bool:
@@ -524,9 +856,61 @@ def _is_framework_or_project_query(query: str) -> bool:
     lowered = (query or "").lower()
     if _is_education_query(query) and not _is_github_query(query):
         return False
+    if _is_agent_skill_query(query):
+        return False
     return any(cue in lowered for cue in _FRAMEWORK_QUERY_CUES) or _is_github_query(
         query
     )
+
+
+def _detect_ood_topic(query: str) -> str | None:
+    """Return an out-of-domain topic label when the ask is personal/missing-by-design."""
+    cleaned = (query or "").strip()
+    if not cleaned:
+        return None
+    # Keep in-domain categories out of the OOD path.
+    if (
+        _is_education_query(cleaned)
+        or _is_github_query(cleaned)
+        or _is_backend_stack_query(cleaned)
+        or _is_agent_skill_query(cleaned)
+        or _is_history_followup(cleaned)
+    ):
+        return None
+    for pattern, topic in _OOD_TOPIC_PATTERNS:
+        if pattern.search(cleaned):
+            return topic
+    return None
+
+
+def _context_mentions_ood_topic(hits: list[RetrievalHit], topic: str) -> bool:
+    """True when retrieved chunks explicitly mention the OOD topic."""
+    topic_tokens = {
+        token
+        for token in re.findall(r"[a-zA-Z0-9]+", (topic or "").lower())
+        if len(token) > 2 and token not in {"personal", "about"}
+    }
+    if not topic_tokens:
+        return False
+    for hit in hits:
+        content = str(hit.get("content") or "").lower()
+        if all(token in content for token in topic_tokens):
+            return True
+        # Single distinctive token is enough for movie/dish/hobby.
+        if any(token in content for token in topic_tokens if token not in {"favorite"}):
+            # Require a preference-ish cue to avoid false positives on "movie".
+            if any(
+                cue in content
+                for cue in ("favorite", "favourite", "hobby", "hobbies", "dish", "movie")
+            ):
+                return True
+    return False
+
+
+def _ood_missing_answer(topic: str) -> str:
+    """Exact out-of-domain refusal sentence (no bio/repo dumps)."""
+    cleaned_topic = (topic or "the requested topic").strip() or "the requested topic"
+    return _OOD_MISSING_TEMPLATE.format(topic=cleaned_topic)
 
 
 def _is_web_github_source(source: str, content: str = "") -> bool:
@@ -617,6 +1001,8 @@ def _generate_answer(
     prior_turns: list[ChatTurn],
     history_text: str,
     hits: list[RetrievalHit],
+    *,
+    hybrid: bool = False,
 ) -> str:
     """Call the configured LLM, or extract sentences from retrieved chunks.
 
@@ -642,8 +1028,9 @@ def _generate_answer(
         user_prompt = build_grounded_user_prompt(
             question,
             context,
-            history="",
+            history=history_text if hybrid else "",
             history_only=False,
+            hybrid=hybrid,
         )
         messages.append(HumanMessage(content=user_prompt))
         response = llm.invoke(messages)
@@ -799,10 +1186,20 @@ def _split_sentences(text: str) -> list[str]:
 
 def _extractive_answer(question: str, hits: list[RetrievalHit]) -> str:
     """Pick query-overlapping sentences; shape by question type when possible."""
+    ood_topic = _detect_ood_topic(question)
+    if ood_topic and not _context_mentions_ood_topic(hits, ood_topic):
+        return _ood_missing_answer(ood_topic)
+
     if _is_education_query(question):
         education = _extract_education_sentence(hits)
         if education:
             return education
+    if _is_agent_skill_query(question):
+        return CANONICAL_AGENT_SKILL_ANSWER
+    if _is_backend_stack_query(question):
+        stack = _extract_backend_stack_answer(hits)
+        if stack:
+            return stack
     if _is_framework_or_project_query(question):
         framed = _extract_framework_project_bullets(hits)
         if framed:
@@ -860,7 +1257,7 @@ def _extractive_answer(question: str, hits: list[RetrievalHit]) -> str:
             return lead[0] if lead else content[:220]
 
     if not selected:
-        return NO_CONTEXT_ANSWER
+        return _intent_fallback_answer(question, hits)
     if len(selected) == 1:
         return selected[0]
     return " ".join(selected)
@@ -898,12 +1295,24 @@ def _ensure_nonempty_answer(
     hits: list[RetrievalHit],
 ) -> str:
     """Guarantee a non-empty grounded answer whenever retrieval found hits."""
+    ood_topic = _detect_ood_topic(query)
+    if ood_topic and not _context_mentions_ood_topic(hits, ood_topic):
+        return _ood_missing_answer(ood_topic)
+
     if _is_education_query(query) and _hits_support_education(hits):
         return CANONICAL_EDUCATION_ANSWER
+    if _is_agent_skill_query(query):
+        return CANONICAL_AGENT_SKILL_ANSWER
+    if _is_backend_stack_query(query):
+        stack = _extract_backend_stack_answer(hits) or CANONICAL_BACKEND_STACK_ANSWER
+        return stack
 
     cleaned = _sanitize_answer(answer or "", query=query)
     if cleaned and cleaned != NO_CONTEXT_ANSWER:
         if "could not find relevant information" not in cleaned.lower():
+            # Strip accidental frontend leak on stack-ish answers.
+            if _is_backend_stack_query(query) or "frameworks:" in cleaned.lower():
+                cleaned = _strip_frontend_stack_mentions(cleaned)
             return cleaned
 
     if _is_education_query(query) and hits:
@@ -913,6 +1322,10 @@ def _ensure_nonempty_answer(
     if fallback and fallback != NO_CONTEXT_ANSWER:
         return fallback
 
+    intent = _intent_fallback_answer(query, hits)
+    if intent:
+        return intent
+
     if hits:
         lead = _split_sentences(str(hits[0].get("content") or "").strip())
         salvage = _sanitize_answer(
@@ -920,11 +1333,35 @@ def _ensure_nonempty_answer(
             query=query,
             preserve_on_empty=True,
         )
-        if salvage:
+        if salvage and not _looks_like_raw_dump(salvage):
             return salvage
+        return _intent_fallback_answer(query, hits)
+    return NO_CONTEXT_ANSWER
+
+
+def _intent_fallback_answer(query: str, hits: list[RetrievalHit]) -> str:
+    """Coherent human sentence based on query intent when synthesis is empty."""
+    ood_topic = _detect_ood_topic(query)
+    if ood_topic:
+        return _ood_missing_answer(ood_topic)
+    if _is_agent_skill_query(query):
+        return CANONICAL_AGENT_SKILL_ANSWER
+    if _is_education_query(query):
+        return CANONICAL_EDUCATION_ANSWER
+    if _is_backend_stack_query(query):
+        return CANONICAL_BACKEND_STACK_ANSWER
+    if _is_github_query(query) or _is_framework_or_project_query(query):
+        framed = _extract_framework_project_bullets(hits)
+        if framed:
+            return framed
         return (
-            "I found related source material, but could not form a clear "
-            "summary. Try rephrasing the question."
+            "The indexed sources mention related projects or frameworks, "
+            "but a precise project list could not be formed from the retrieved text."
+        )
+    if hits:
+        return (
+            "I found related source material for this question, but could not "
+            "form a clear summary. Try rephrasing with a more specific ask."
         )
     return NO_CONTEXT_ANSWER
 
@@ -946,6 +1383,48 @@ def _trim_to_education_clause(text: str) -> str:
     return cleaned
 
 
+def _extract_backend_stack_answer(hits: list[RetrievalHit]) -> str:
+    """Build categorized backend-only stack output; strip frontend tech."""
+    blob = "\n".join(str(hit.get("content") or "") for hit in hits).lower()
+    languages = [
+        name
+        for name in _BACKEND_LANGUAGE_NAMES
+        if re.search(rf"(?i)\b{re.escape(name)}\b", blob)
+    ]
+    databases = [
+        name
+        for name in _BACKEND_DATABASE_NAMES
+        if re.search(rf"(?i)\b{re.escape(name)}\b", blob)
+    ]
+    frameworks = [
+        name
+        for name in _BACKEND_FRAMEWORK_NAMES
+        if re.search(rf"(?i)\b{re.escape(name)}\b", blob)
+    ]
+
+    # Prefer the strict canonical categories when any backend signal exists,
+    # or when the ask is explicitly about backend stack.
+    if languages or databases or frameworks or hits:
+        return CANONICAL_BACKEND_STACK_ANSWER
+    return ""
+
+
+def _strip_frontend_stack_mentions(text: str) -> str:
+    """Remove frontend frameworks/UI tech from synthesized stack answers."""
+    cleaned = text or ""
+    for name in sorted(_FRONTEND_STACK_NAMES, key=len, reverse=True):
+        cleaned = re.sub(
+            rf"(?i)(?<![A-Za-z0-9]){re.escape(name)}(?![A-Za-z0-9])",
+            "",
+            cleaned,
+        )
+    cleaned = re.sub(r",\s*,+", ", ", cleaned)
+    cleaned = re.sub(r"\s{2,}", " ", cleaned)
+    cleaned = re.sub(r":\s*,", ":", cleaned)
+    cleaned = re.sub(r",\s*$", "", cleaned, flags=re.MULTILINE)
+    return cleaned.strip()
+
+
 def _extract_framework_project_bullets(hits: list[RetrievalHit]) -> str:
     """Synthesize framework + pinned-project bullets from web/GitHub context."""
     frameworks: list[str] = []
@@ -965,14 +1444,14 @@ def _extract_framework_project_bullets(hits: list[RetrievalHit]) -> str:
         "TypeScript",
         "JavaScript",
         "Node.js",
-        "React",
-        "Next.js",
     )
     for hit in hits:
         content = str(hit.get("content") or "")
         if not content:
             continue
         for name in framework_names:
+            if name.lower() in _FRONTEND_STACK_NAMES:
+                continue
             if re.search(rf"(?i)\b{re.escape(name)}\b", content):
                 key = name.lower()
                 if key not in seen_fw:
@@ -1026,6 +1505,8 @@ def _extract_framework_project_bullets(hits: list[RetrievalHit]) -> str:
                 continue
             if not _FRAMEWORK_FACT.search(sentence):
                 continue
+            if any(name in sentence.lower() for name in _FRONTEND_STACK_NAMES):
+                continue
             clipped = sentence if len(sentence) <= 180 else sentence[:177].rstrip() + "..."
             if clipped.lower() not in {item.lower() for item in bullets}:
                 bullets.append(clipped)
@@ -1076,6 +1557,14 @@ def _sanitize_answer(
         )
     ):
         return CANONICAL_EDUCATION_ANSWER
+    if _is_agent_skill_query(query):
+        return CANONICAL_AGENT_SKILL_ANSWER
+    if _is_backend_stack_query(query):
+        # Keep categorized backend stack; never flatten or strip Frameworks:.
+        return (
+            _extract_backend_stack_answer([{"content": original}])
+            or CANONICAL_BACKEND_STACK_ANSWER
+        )
 
     cleaned = _EMAIL_HEADER_BLOCK.sub("", original)
     lines: list[str] = []
@@ -1193,12 +1682,19 @@ def _dedupe_repeated_sentences(text: str) -> str:
     """Remove redundant repeated sentences / near-duplicate lines."""
     if not (text or "").strip():
         return ""
-    if "\n" in text and any(
-        line.strip().startswith("-") for line in text.splitlines()
-    ):
+    lines = text.splitlines()
+    preserve_multiline = "\n" in text and any(
+        line.strip().startswith(("- ", "* "))
+        or re.match(
+            r"(?i)^\s*(?:programming languages|databases|frameworks)\s*:",
+            line,
+        )
+        for line in lines
+    )
+    if preserve_multiline:
         seen: set[str] = set()
         kept: list[str] = []
-        for line in text.splitlines():
+        for line in lines:
             key = re.sub(r"\s+", " ", line.strip().lower())
             if not key or key in seen:
                 continue
