@@ -1,4 +1,4 @@
-# OmniRAG Studio
+# OmniRAG Studio   
 
  
 Production-ready multi-source RAG (Retrieval-Augmented Generation) chatbot. Ingest PDFs, CSVs, and web pages; embed them locally with HuggingFace; persist vectors in ChromaDB; and answer questions with source citations.
