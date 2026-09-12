@@ -1,7 +1,7 @@
 # OmniRAG Studio   
 
  
-Production-ready multi-source RAG (Retrieval-Augmented Generation) chatbot. Ingest PDFs, CSVs, and web pages; embed them locally with HuggingFace; persist vectors in ChromaDB; and answer questions with source citations.
+Production-ready multi-source RAG (Retrieval-Augmented Generation) chatbot. Ingest PDFs, CSVs, and web pages; embed them locally with HuggingFace; persist vectors in ChromaDB; and answer questions with source citations.                                                    
 
  
 The backend is FastAPI. The optional UI is Streamlit. Domain logic (ingestion, vector store, RAG, analytics) never imports FastAPI or Streamlit. 
