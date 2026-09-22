@@ -95,9 +95,9 @@ python -m backend.main
 or:
 
 ```bash
-uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
+uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000          
 ```
-
+  
 Health check: `GET http://127.0.0.1:8000/health` → `{"status":"ok","app":"OmniRAG Studio"}`.
 
 Interactive docs (Swagger UI): [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs).
