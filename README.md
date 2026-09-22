@@ -6,7 +6,7 @@ Production-ready multi-source RAG (Retrieval-Augmented Generation) chatbot. Inge
 The backend is FastAPI. The optional UI is Streamlit. Domain logic (ingestion, vector store, RAG, analytics) never imports FastAPI or Streamlit.  
 
    
-## Architecture flow
+## Architecture flow          
      
 ```   
 PDF / CSV / URL
