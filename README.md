@@ -26,11 +26,11 @@ PDF / CSV / URL
         ├─ similarity search (top-k)
         ├─ optional OpenAI LLM (gpt-4o-mini)
         └─ extractive fallback if the LLM key/quota is missing
-        │
+        │                
         ▼
  { answer, citations[{source, page/row}], session_id }
-```
-
+```         
+          
 | Layer | Path | Responsibility |
 |-------|------|----------------|
 | HTTP | `backend/api/v1/` | Routers: ingest, chat, analytics. Registered in `backend/api/router.py`. |
