@@ -30,7 +30,7 @@ PDF / CSV / URL
         ▼
  { answer, citations[{source, page/row}], session_id }
 ```         
-          
+             
 | Layer | Path | Responsibility |
 |-------|------|----------------|
 | HTTP | `backend/api/v1/` | Routers: ingest, chat, analytics. Registered in `backend/api/router.py`. |
