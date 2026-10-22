@@ -16,7 +16,7 @@ PDF / CSV / URL
         │
         ▼
  HuggingFace embeddings (all-MiniLM-L6-v2, CPU)
-        │
+        │                                          
         ▼
  ChromaDB collection (CHROMA_DB_PATH)
         │
