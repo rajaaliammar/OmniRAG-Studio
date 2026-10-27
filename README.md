@@ -116,7 +116,7 @@ Open [http://localhost:3000](http://localhost:3000). The dashboard polls `GET /h
 ## API endpoints
 
 Base path: `/api/v1`. Successful JSON bodies are typed Pydantic models. Errors use `{"detail": "..."}` with the HTTP status below.
-
+                                           
 ### `POST /api/v1/ingest/file`
 
 Upload a **PDF** or **CSV**. The handler dispatches on file extension.
