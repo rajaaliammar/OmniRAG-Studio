@@ -1,4 +1,4 @@
-# OmniRAG Studio 
+ # OmniRAG Studio 
                  
 Production-ready multi-source RAG (Retrieval-Augmented Generation) chatbot. Ingest PDFs, CSVs, and web pages; embed them locally with HuggingFace; persist vectors in ChromaDB; and answer questions with source citations.                                                                                 
                                                                             
@@ -75,7 +75,7 @@ On macOS/Linux use `cp .env.example .env` instead of `copy`.
                                    
 The default embedding provider is **local** and does **not** require an OpenAI key:
 
-```
+```                     
 EMBEDDING_PROVIDER=huggingface
 EMBEDDING_MODEL=all-MiniLM-L6-v2
 ```
