@@ -13,8 +13,7 @@ PDF / CSV / URL
         │
         ▼                                                                        
  ingestion loaders  →  recursive text splitter
-        │
-        ▼
+        │                   
  HuggingFace embeddings (all-MiniLM-L6-v2, CPU)
         │                                          
         ▼
