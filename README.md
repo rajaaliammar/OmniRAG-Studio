@@ -72,7 +72,7 @@ On macOS/Linux use `cp .env.example .env` instead of `copy`.
 
 ### Local HuggingFace embeddings 
                                    
-The default embedding provider is **local** and does **not** require an OpenAI key:
+The default embedding provider is **local** and does **not** require an OpenAI key:                
 
 ```                     
 EMBEDDING_PROVIDER=huggingface
