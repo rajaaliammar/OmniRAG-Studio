@@ -12,7 +12,7 @@ The backend is FastAPI. The optional UI is Streamlit. Domain logic (ingestion, v
 PDF / CSV / URL                                                          
         │                                                         
         ▼                                                                        
- ingestion loaders  →  recursive text splitter
+ ingestion loaders  →  recursive text splitter         
         │                   
  HuggingFace embeddings (all-MiniLM-L6-v2, CPU)
         │                                          
